@@ -1,4 +1,4 @@
-*~
-*.project
-*.cproject
-
+amcl/build/
+amcl/amcl.*
+map_server/build/
+map_server/map_server.*
