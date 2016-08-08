@@ -28,7 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////
 
 
-#include "amcl_sensor.h"
+#include "amcl_sensor.hpp"
 
 using namespace amcl;
 
@@ -45,7 +45,7 @@ AMCLSensor::~AMCLSensor()
 
 ////////////////////////////////////////////////////////////////////////////////
 // Apply the action model
-bool AMCLSensor::UpdateAction(pf_t *pf, AMCLSensorData *data)
+bool AMCLSensor::updateAction(pf::ParticleFilterPtr pf, AMCLSensorDataPtr data)
 {
   return false;
 }
@@ -53,7 +53,7 @@ bool AMCLSensor::UpdateAction(pf_t *pf, AMCLSensorData *data)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Initialize the filter
-bool AMCLSensor::InitSensor(pf_t *pf, AMCLSensorData *data)
+bool AMCLSensor::initSensor(pf::ParticleFilterPtr pf, AMCLSensorDataPtr data)
 {
   return false;
 }
@@ -61,35 +61,7 @@ bool AMCLSensor::InitSensor(pf_t *pf, AMCLSensorData *data)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Apply the sensor model
-bool AMCLSensor::UpdateSensor(pf_t *pf, AMCLSensorData *data)
+bool AMCLSensor::updateSensor(pf::ParticleFilterPtr pf, AMCLSensorDataPtr data)
 {
   return false;
 }
-
-
-#ifdef INCLUDE_RTKGUI
-
-////////////////////////////////////////////////////////////////////////////////
-// Setup the GUI
-void AMCLSensor::SetupGUI(rtk_canvas_t *canvas, rtk_fig_t *robot_fig)
-{
-  return;
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-// Shutdown the GUI
-void AMCLSensor::ShutdownGUI(rtk_canvas_t *canvas, rtk_fig_t *robot_fig)
-{
-  return;
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-// Draw sensor data
-void AMCLSensor::UpdateGUI(rtk_canvas_t *canvas, rtk_fig_t *robot_fig, AMCLSensorData *data)
-{
-  return;
-}
-
-#endif

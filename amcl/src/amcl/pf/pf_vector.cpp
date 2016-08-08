@@ -1,65 +1,53 @@
-/*
- *  Player - One Hell of a Robot Server
- *  Copyright (C) 2000  Brian Gerkey   &  Kasper Stoy
- *                      gerkey@usc.edu    kaspers@robotics.usc.edu
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- */
-/**************************************************************************
- * Desc: Vector functions
- * Author: Andrew Howard
- * Date: 10 Dec 2002
- * CVS: $Id: pf_vector.c 6345 2008-04-17 01:36:39Z gerkey $
- *************************************************************************/
+#include <cmath>
+#include <cstdlib>
 
-#include <math.h>
-//#include <gsl/gsl_matrix.h>
-//#include <gsl/gsl_eigen.h>
-//#include <gsl/gsl_linalg.h>
+#include "pf_vector.hpp"
+#include "eig3.hpp"
 
-#include "pf_vector.h"
-#include "eig3.h"
+using namespace amcl::pf;
 
-
-// Return a zero vector
-pf_vector_t pf_vector_zero()
+// Decompose the convariance matrix into a rotation matrix and a diagonal matrix.
+void amcl::pf::MatrixUnitary(const Covariance &a, Covariance &rot, Covariance &diag)
 {
-  pf_vector_t c;
+  double *aa[3];
+  double eval[3];
+  double *evec[3];
 
-  c.v[0] = 0.0;
-  c.v[1] = 0.0;
-  c.v[2] = 0.0;
-  
-  return c;
+  for (size_t i=0; i<3; i++) {
+    aa[i] = (double*)malloc(3 * sizeof(double));
+  }
+
+  for (size_t i=0; i<3; i++) {
+    for (size_t j=0; j<3; j++) {
+      aa[i][j] = a.m[i][j];
+    }
+  }
+
+  for (size_t i=0; i<3; i++) {
+    evec[i] = (double*)malloc(3 * sizeof(double));
+  }
+
+  eigen_decomposition(aa,evec,eval,3);
+
+  for (size_t i=0; i<3; i++) {
+    diag.m[i][i] = eval[i];
+    for (size_t j=0; j<3; j++) {
+      rot.m[i][j] = evec[i][j];
+    }
+  }
 }
-
 
 // Check for NAN or INF in any component
-int pf_vector_finite(pf_vector_t a)
+bool Pose::isFinite()
 {
-  int i;
-  
-  for (i = 0; i < 3; i++)
-    if (!finite(a.v[i]))
-      return 0;
-  
-  return 1;
+  if (!finite(x())) return false;
+  if (!finite(y())) return false;
+  if (!finite(a())) return false;
+  return true;
 }
 
 
+/*
 // Print a vector
 void pf_vector_fprintf(pf_vector_t a, FILE *file, const char *fmt)
 {
@@ -128,8 +116,20 @@ pf_vector_t pf_vector_coord_sub(pf_vector_t a, pf_vector_t b)
   
   return c;
 }
+*/
 
+Pose Pose::CoordAdd(const Pose &a, const Pose &b)
+{
+  Pose c;
+  c.v[0] = +(a.v[0] - b.v[0]) * cos(b.v[2]) + (a.v[1] - b.v[1]) * sin(b.v[2]);
+  c.v[1] = -(a.v[0] - b.v[0]) * sin(b.v[2]) + (a.v[1] - b.v[1]) * cos(b.v[2]);
+  c.v[2] = a.v[2] - b.v[2];
+  c.v[2] = atan2(sin(c.v[2]), cos(c.v[2]));
 
+  return c;
+}
+
+/*
 // Return a zero matrix
 pf_matrix_t pf_matrix_zero()
 {
@@ -156,8 +156,19 @@ int pf_matrix_finite(pf_matrix_t a)
   
   return 1;
 }
+*/
+bool Covariance::isFinite()
+{
+   for (size_t i=0; i<3; i++) {
+     for (size_t j=0; j<3; j++) {
+       if (!finite(m[i][j]))
+         return false;
+     }
+   }
+   return true;
+}
 
-
+/*
 // Print a matrix
 void pf_matrix_fprintf(pf_matrix_t a, FILE *file, const char *fmt)
 {
@@ -174,7 +185,7 @@ void pf_matrix_fprintf(pf_matrix_t a, FILE *file, const char *fmt)
   }
   return;     
 }
-
+*/
 
 /*
 // Compute the matrix inverse
@@ -214,24 +225,12 @@ pf_matrix_t pf_matrix_inverse(pf_matrix_t a, double *det)
 
   return ai;
 }
-*/
-
 
 // Decompose a covariance matrix [a] into a rotation matrix [r] and a diagonal
 // matrix [d] such that a = r d r^T.
 void pf_matrix_unitary(pf_matrix_t *r, pf_matrix_t *d, pf_matrix_t a)
 {
   int i, j;
-  /*
-  gsl_matrix *aa;
-  gsl_vector *eval;
-  gsl_matrix *evec;
-  gsl_eigen_symmv_workspace *w;
-
-  aa = gsl_matrix_alloc(3, 3);
-  eval = gsl_vector_alloc(3);
-  evec = gsl_matrix_alloc(3, 3);
-  */
 
   double aa[3][3];
   double eval[3];
@@ -247,11 +246,6 @@ void pf_matrix_unitary(pf_matrix_t *r, pf_matrix_t *d, pf_matrix_t a)
   }
 
   // Compute eigenvectors/values
-  /*
-  w = gsl_eigen_symmv_alloc(3);
-  gsl_eigen_symmv(aa, eval, evec, w);
-  gsl_eigen_symmv_free(w);
-  */
 
   eigen_decomposition(aa,evec,eval);
 
@@ -267,10 +261,6 @@ void pf_matrix_unitary(pf_matrix_t *r, pf_matrix_t *d, pf_matrix_t a)
     }
   }
   
-  //gsl_matrix_free(evec);
-  //gsl_vector_free(eval);
-  //gsl_matrix_free(aa);
-  
   return;
 }
-
+*/

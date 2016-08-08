@@ -1,56 +1,29 @@
-/*
- *  Player - One Hell of a Robot Server
- *  Copyright (C) 2000  Brian Gerkey   &  Kasper Stoy
- *                      gerkey@usc.edu    kaspers@robotics.usc.edu
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- */
-/**************************************************************************
- * Desc: Global map storage functions
- * Author: Andrew Howard
- * Date: 6 Feb 2003
- * CVS: $Id: map_store.c 2951 2005-08-19 00:48:20Z gerkey $
-**************************************************************************/
-
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "map.h"
+#include "map.hpp"
 
+using namespace amcl::map;
 
 ////////////////////////////////////////////////////////////////////////////
 // Load an occupancy grid
-int map_load_occ(map_t *map, const char *filename, double scale, int negate)
+//int map_load_occ(map_t *map, const char *filename, double scale, int negate)
+MapPtr Map::LoadOccMap(const std::string &filename, const double &scale, const int &negate)
 {
   FILE *file;
   char magic[3];
-  int i, j;
   int ch, occ;
   int width, height, depth;
-  map_cell_t *cell;
+  //map_cell_t *cell;
 
   // Open file
-  file = fopen(filename, "r");
-  if (file == NULL)
-  {
-    fprintf(stderr, "%s: %s\n", strerror(errno), filename);
-    return -1;
+  file = std::fopen(filename.c_str(), "r");
+  if (file == NULL) {
+    fprintf(stderr, "%s: %s\n", strerror(errno), filename.c_str());
+    return nullptr;
   }
 
   // Read ppm header
@@ -58,7 +31,7 @@ int map_load_occ(map_t *map, const char *filename, double scale, int negate)
   if ((fscanf(file, "%10s \n", magic) != 1) || (strcmp(magic, "P5") != 0))
   {
     fprintf(stderr, "incorrect image format; must be PGM/binary");
-    return -1;
+    return nullptr;
   }
 
   // Ignore comments
@@ -70,31 +43,32 @@ int map_load_occ(map_t *map, const char *filename, double scale, int negate)
   if(fscanf(file, " %d %d \n %d \n", &width, &height, &depth) != 3)
   {
     fprintf(stderr, "Failed ot read image dimensions");
-    return -1;
+    return nullptr;
   }
 
+  MapPtr map = CreateMap();
   // Allocate space in the map
-  if (map->cells == NULL)
+  if (map->cells.empty())
   {
     map->scale = scale;
     map->size_x = width;
     map->size_y = height;
-    map->cells = calloc(width * height, sizeof(map->cells[0]));
-  }
-  else
-  {
+    //map->cells = calloc(width * height, sizeof(map->cells[0]));
+    map->cells.resize(width * height);
+    for (auto cell_ptr : map->cells) {
+      cell_ptr = std::make_shared<Cell>();
+    }
+  } else {
     if (width != map->size_x || height != map->size_y)
     {
-      //PLAYER_ERROR("map dimensions are inconsistent with prior map dimensions");
-      return -1;
+      fprintf(stderr, "map dimensions are inconsistent with prior map dimensions");
+      return nullptr;
     }
   }
 
   // Read in the image
-  for (j = height - 1; j >= 0; j--)
-  {
-    for (i = 0; i < width; i++)
-    {
+  for (int j = height - 1; j >= 0; j--) {
+    for (int i = 0; i < width; i++) {
       ch = fgetc(file);
 
       // Black-on-white images
@@ -119,16 +93,16 @@ int map_load_occ(map_t *map, const char *filename, double scale, int negate)
           occ = 0;
       }
 
-      if (!MAP_VALID(map, i, j))
+      if (map->isValid(i, j))
         continue;
-      cell = map->cells + MAP_INDEX(map, i, j);
+      CellPtr cell = map->cells[map->toIndex(i, j)];
       cell->occ_state = occ;
     }
   }
   
   fclose(file);
   
-  return 0;
+  return map;
 }
 
 
