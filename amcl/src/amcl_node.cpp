@@ -1,25 +1,3 @@
-/*
- *  Copyright (c) 2008, Willow Garage, Inc.
- *  All rights reserved.
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- */
-
-/* Author: Brian Gerkey */
-
 #include <algorithm>
 #include <vector>
 #include <map>
@@ -31,10 +9,10 @@
 // Signal handling
 #include <signal.h>
 
-#include "map/map.h"
-#include "pf/pf.h"
-#include "sensors/amcl_odom.h"
-#include "sensors/amcl_laser.h"
+#include "map/map.hpp"
+#include "pf/pf.hpp"
+#include "sensors/amcl_odom.hpp"
+#include "sensors/amcl_laser.hpp"
 
 #include "ros/assert.h"
 
@@ -68,7 +46,27 @@
 
 #define NEW_UNIFORM_SAMPLING 1
 
+#include <cstring>
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#define TRACE_FUNC \
+  do { \
+    std::cout << __FILE__ << ":" << __LINE__ << " in " << __func__ << std::endl; \
+  } while (0);using namespace amcl;
+
+#define TRACE_FUNC_ENTER \
+  do { \
+    std::cout << __FILE__ << ":" << __LINE__ << " in " << __func__ << ":[ENTER]" << std::endl; \
+  } while (0);
+
+#define TRACE_FUNC_EXIT \
+  do { \
+    std::cout << __FILE__ << ":" << __LINE__ << " in " << __func__ << ":[EXIT]" << std::endl; \
+  } while (0);
+
+
 using namespace amcl;
+
+
 
 // Pose hypothesis
 typedef struct
@@ -158,7 +156,7 @@ class AmclNode
 
     void handleMapMessage(const nav_msgs::OccupancyGrid& msg);
     void freeMapDependentMemory();
-    map_t* convertMap( const nav_msgs::OccupancyGrid& map_msg );
+    MapPtr convertMap( const nav_msgs::OccupancyGrid& map_msg );
     void updatePoseFromServer();
     void applyInitialPose();
 
@@ -174,7 +172,7 @@ class AmclNode
     std::string base_frame_id_;
     std::string global_frame_id_;
 
-    bool use_map_topic_;
+    bool use_Mapopic_;
     bool first_map_only_;
 
     ros::Duration gui_publish_period;
@@ -183,7 +181,7 @@ class AmclNode
 
     geometry_msgs::PoseWithCovarianceStamped last_published_pose;
 
-    map_t* map_;
+    MapPtr map_;
     char* mapdata;
     int sx, sy;
     double resolution;
@@ -211,6 +209,7 @@ class AmclNode
 
     AMCLOdom* odom_;
     AMCLLaser* laser_;
+    //AMCLLaserPtr laser_;
 
     ros::Duration cloud_pub_interval;
     ros::Time last_cloud_pub_time;
@@ -285,6 +284,7 @@ void sigintHandler(int sig)
 int
 main(int argc, char** argv)
 {
+  TRACE_FUNC_ENTER
   ros::init(argc, argv, "amcl");
   ros::NodeHandle nh;
 
@@ -318,16 +318,17 @@ AmclNode::AmclNode() :
         pf_(NULL),
         resample_count_(0),
         odom_(NULL),
-        laser_(NULL),
-	      private_nh_("~"),
+        laser_(nullptr),
+              private_nh_("~"),
         initial_pose_hyp_(NULL),
         first_map_received_(false),
         first_reconfigure_call_(true)
 {
+  TRACE_FUNC_ENTER
   boost::recursive_mutex::scoped_lock l(configuration_mutex_);
 
   // Grab params off the param server
-  private_nh_.param("use_map_topic", use_map_topic_, false);
+  private_nh_.param("use_Mapopic", use_Mapopic_, false);
   private_nh_.param("first_map_only", first_map_only_, false);
 
   double tmp;
@@ -348,7 +349,7 @@ AmclNode::AmclNode() :
   private_nh_.param("odom_alpha3", alpha3_, 0.2);
   private_nh_.param("odom_alpha4", alpha4_, 0.2);
   private_nh_.param("odom_alpha5", alpha5_, 0.2);
-  
+
   private_nh_.param("do_beamskip", do_beamskip_, false);
   private_nh_.param("beam_skip_distance", beam_skip_distance_, 0.5);
   private_nh_.param("beam_skip_threshold", beam_skip_threshold_, 0.3);
@@ -421,23 +422,23 @@ AmclNode::AmclNode() :
 
   pose_pub_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("amcl_pose", 2, true);
   particlecloud_pub_ = nh_.advertise<geometry_msgs::PoseArray>("particlecloud", 2, true);
-  global_loc_srv_ = nh_.advertiseService("global_localization", 
-					 &AmclNode::globalLocalizationCallback,
+  global_loc_srv_ = nh_.advertiseService("global_localization",
+                                         &AmclNode::globalLocalizationCallback,
                                          this);
   nomotion_update_srv_= nh_.advertiseService("request_nomotion_update", &AmclNode::nomotionUpdateCallback, this);
   set_map_srv_= nh_.advertiseService("set_map", &AmclNode::setMapCallback, this);
 
   laser_scan_sub_ = new message_filters::Subscriber<sensor_msgs::LaserScan>(nh_, scan_topic_, 100);
-  laser_scan_filter_ = 
-          new tf::MessageFilter<sensor_msgs::LaserScan>(*laser_scan_sub_, 
-                                                        *tf_, 
-                                                        odom_frame_id_, 
+  laser_scan_filter_ =
+          new tf::MessageFilter<sensor_msgs::LaserScan>(*laser_scan_sub_,
+                                                        *tf_,
+                                                        odom_frame_id_,
                                                         100);
   laser_scan_filter_->registerCallback(boost::bind(&AmclNode::laserReceived,
                                                    this, _1));
   initial_pose_sub_ = nh_.subscribe("initialpose", 2, &AmclNode::initialPoseReceived, this);
 
-  if(use_map_topic_) {
+  if(use_Mapopic_) {
     map_sub_ = nh_.subscribe("map", 1, &AmclNode::mapReceived, this);
     ROS_INFO("Subscribed to map topic.");
   } else {
@@ -451,12 +452,14 @@ AmclNode::AmclNode() :
 
   // 15s timer to warn on lack of receipt of laser scans, #5209
   laser_check_interval_ = ros::Duration(15.0);
-  check_laser_timer_ = nh_.createTimer(laser_check_interval_, 
+  check_laser_timer_ = nh_.createTimer(laser_check_interval_,
                                        boost::bind(&AmclNode::checkLaserReceived, this, _1));
+  TRACE_FUNC_EXIT
 }
 
 void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
 {
+  TRACE_FUNC_ENTER
   boost::recursive_mutex::scoped_lock cfl(configuration_mutex_);
 
   //we don't want to do anything on the first call
@@ -530,16 +533,16 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   alpha_fast_ = config.recovery_alpha_fast;
   tf_broadcast_ = config.tf_broadcast;
 
-  do_beamskip_= config.do_beamskip; 
-  beam_skip_distance_ = config.beam_skip_distance; 
-  beam_skip_threshold_ = config.beam_skip_threshold; 
+  do_beamskip_= config.do_beamskip;
+  beam_skip_distance_ = config.beam_skip_distance;
+  beam_skip_threshold_ = config.beam_skip_threshold;
 
   pf_ = pf_alloc(min_particles_, max_particles_,
                  alpha_slow_, alpha_fast_,
                  (pf_init_model_fn_t)AmclNode::uniformPoseGenerator,
-                 (void *)map_);
-  pf_err_ = config.kld_err; 
-  pf_z_ = config.kld_z; 
+                 (void *)map_.get());
+  pf_err_ = config.kld_err;
+  pf_z_ = config.kld_z;
   pf_->pop_err = pf_err_;
   pf_->pop_z = pf_z_;
 
@@ -563,7 +566,9 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   odom_->SetModel( odom_model_type_, alpha1_, alpha2_, alpha3_, alpha4_, alpha5_ );
   // Laser
   delete laser_;
+  //laser_.reset();
   laser_ = new AMCLLaser(max_beams_, map_);
+  //laser_ = std::make_shared<AMCLLaser>(max_beams_, map_);
   ROS_ASSERT(laser_);
   if(laser_model_type_ == LASER_MODEL_BEAM)
     laser_->SetModelBeam(z_hit_, z_short_, z_max_, z_rand_,
@@ -571,9 +576,9 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   else if(laser_model_type_ == LASER_MODEL_LIKELIHOOD_FIELD_PROB){
     ROS_INFO("Initializing likelihood field model; this can take some time on large maps...");
     laser_->SetModelLikelihoodFieldProb(z_hit_, z_rand_, sigma_hit_,
-					laser_likelihood_max_dist_, 
-					do_beamskip_, beam_skip_distance_, 
-					beam_skip_threshold_, beam_skip_error_threshold_);
+                                        laser_likelihood_max_dist_,
+                                        do_beamskip_, beam_skip_distance_,
+                                        beam_skip_threshold_, beam_skip_error_threshold_);
     ROS_INFO("Done initializing likelihood field model with probabilities.");
   }
   else if(laser_model_type_ == LASER_MODEL_LIKELIHOOD_FIELD){
@@ -588,15 +593,16 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   global_frame_id_ = config.global_frame_id;
 
   delete laser_scan_filter_;
-  laser_scan_filter_ = 
-          new tf::MessageFilter<sensor_msgs::LaserScan>(*laser_scan_sub_, 
-                                                        *tf_, 
-                                                        odom_frame_id_, 
+  laser_scan_filter_ =
+          new tf::MessageFilter<sensor_msgs::LaserScan>(*laser_scan_sub_,
+                                                        *tf_,
+                                                        odom_frame_id_,
                                                         100);
   laser_scan_filter_->registerCallback(boost::bind(&AmclNode::laserReceived,
                                                    this, _1));
 
   initial_pose_sub_ = nh_.subscribe("initialpose", 2, &AmclNode::initialPoseReceived, this);
+  TRACE_FUNC_EXIT
 }
 
 
@@ -689,6 +695,7 @@ void AmclNode::runFromBag(const std::string &in_bag_fn)
 
 void AmclNode::savePoseToServer()
 {
+  TRACE_FUNC_ENTER
   // We need to apply the last transform to the latest odom pose to get
   // the latest map pose to store.  We'll take the covariance from
   // last_published_pose.
@@ -701,16 +708,18 @@ void AmclNode::savePoseToServer()
   private_nh_.setParam("initial_pose_x", map_pose.getOrigin().x());
   private_nh_.setParam("initial_pose_y", map_pose.getOrigin().y());
   private_nh_.setParam("initial_pose_a", yaw);
-  private_nh_.setParam("initial_cov_xx", 
+  private_nh_.setParam("initial_cov_xx",
                                   last_published_pose.pose.covariance[6*0+0]);
-  private_nh_.setParam("initial_cov_yy", 
+  private_nh_.setParam("initial_cov_yy",
                                   last_published_pose.pose.covariance[6*1+1]);
-  private_nh_.setParam("initial_cov_aa", 
+  private_nh_.setParam("initial_cov_aa",
                                   last_published_pose.pose.covariance[6*5+5]);
+  TRACE_FUNC_EXIT
 }
 
 void AmclNode::updatePoseFromServer()
 {
+  TRACE_FUNC_ENTER
   init_pose_[0] = 0.0;
   init_pose_[1] = 0.0;
   init_pose_[2] = 0.0;
@@ -722,7 +731,7 @@ void AmclNode::updatePoseFromServer()
   private_nh_.param("initial_pose_x", tmp_pos, init_pose_[0]);
   if(!std::isnan(tmp_pos))
     init_pose_[0] = tmp_pos;
-  else 
+  else
     ROS_WARN("ignoring NAN in initial pose X position");
   private_nh_.param("initial_pose_y", tmp_pos, init_pose_[1]);
   if(!std::isnan(tmp_pos))
@@ -748,12 +757,14 @@ void AmclNode::updatePoseFromServer()
   if(!std::isnan(tmp_pos))
     init_cov_[2] = tmp_pos;
   else
-    ROS_WARN("ignoring NAN in initial covariance AA");	
+    ROS_WARN("ignoring NAN in initial covariance AA");
+  TRACE_FUNC_EXIT
 }
 
-void 
+void
 AmclNode::checkLaserReceived(const ros::TimerEvent& event)
 {
+  TRACE_FUNC_ENTER
   ros::Duration d = ros::Time::now() - last_laser_received_ts_;
   if(d > laser_check_interval_)
   {
@@ -761,11 +772,13 @@ AmclNode::checkLaserReceived(const ros::TimerEvent& event)
              d.toSec(),
              ros::names::resolve(scan_topic_).c_str());
   }
+  TRACE_FUNC_EXIT
 }
 
 void
 AmclNode::requestMap()
 {
+  TRACE_FUNC_ENTER
   boost::recursive_mutex::scoped_lock ml(configuration_mutex_);
 
   // get map via RPC
@@ -779,11 +792,13 @@ AmclNode::requestMap()
     d.sleep();
   }
   handleMapMessage( resp.map );
+  TRACE_FUNC_EXIT
 }
 
 void
 AmclNode::mapReceived(const nav_msgs::OccupancyGridConstPtr& msg)
 {
+  TRACE_FUNC_ENTER
   if( first_map_only_ && first_map_received_ ) {
     return;
   }
@@ -791,11 +806,13 @@ AmclNode::mapReceived(const nav_msgs::OccupancyGridConstPtr& msg)
   handleMapMessage( *msg );
 
   first_map_received_ = true;
+  TRACE_FUNC_EXIT
 }
 
 void
 AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
 {
+  TRACE_FUNC_ENTER
   boost::recursive_mutex::scoped_lock cfl(configuration_mutex_);
 
   ROS_INFO("Received a %d X %d map @ %.3f m/pix\n",
@@ -817,14 +834,14 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
   free_space_indices.resize(0);
   for(int i = 0; i < map_->size_x; i++)
     for(int j = 0; j < map_->size_y; j++)
-      if(map_->cells[MAP_INDEX(map_,i,j)].occ_state == -1)
+      if(map_->cells[map_->toIndex(i,j)]->occ_state == -1)
         free_space_indices.push_back(std::make_pair(i,j));
 #endif
   // Create the particle filter
   pf_ = pf_alloc(min_particles_, max_particles_,
                  alpha_slow_, alpha_fast_,
                  (pf_init_model_fn_t)AmclNode::uniformPoseGenerator,
-                 (void *)map_);
+                 (void *)map_.get());
   pf_->pop_err = pf_err_;
   pf_->pop_z = pf_z_;
 
@@ -849,7 +866,9 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
   odom_->SetModel( odom_model_type_, alpha1_, alpha2_, alpha3_, alpha4_, alpha5_ );
   // Laser
   delete laser_;
+  //laser_.reset();
   laser_ = new AMCLLaser(max_beams_, map_);
+  //laser_ = std::make_shared<AMCLLaser>(max_beams_, map_);
   ROS_ASSERT(laser_);
   if(laser_model_type_ == LASER_MODEL_BEAM)
     laser_->SetModelBeam(z_hit_, z_short_, z_max_, z_rand_,
@@ -857,9 +876,9 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
   else if(laser_model_type_ == LASER_MODEL_LIKELIHOOD_FIELD_PROB){
     ROS_INFO("Initializing likelihood field model; this can take some time on large maps...");
     laser_->SetModelLikelihoodFieldProb(z_hit_, z_rand_, sigma_hit_,
-					laser_likelihood_max_dist_, 
-					do_beamskip_, beam_skip_distance_, 
-					beam_skip_threshold_, beam_skip_error_threshold_);
+                                        laser_likelihood_max_dist_,
+                                        do_beamskip_, beam_skip_distance_,
+                                        beam_skip_threshold_, beam_skip_error_threshold_);
     ROS_INFO("Done initializing likelihood field model.");
   }
   else
@@ -873,14 +892,15 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
   // In case the initial pose message arrived before the first map,
   // try to apply the initial pose now that the map has arrived.
   applyInitialPose();
-
+  TRACE_FUNC_EXIT
 }
 
 void
 AmclNode::freeMapDependentMemory()
 {
+  TRACE_FUNC_ENTER
   if( map_ != NULL ) {
-    map_free( map_ );
+    DeleteMap( map_ );
     map_ = NULL;
   }
   if( pf_ != NULL ) {
@@ -890,17 +910,20 @@ AmclNode::freeMapDependentMemory()
   delete odom_;
   odom_ = NULL;
   delete laser_;
+  //laser_.reset();
   laser_ = NULL;
+  TRACE_FUNC_EXIT
 }
 
 /**
  * Convert an OccupancyGrid map message into the internal
- * representation.  This allocates a map_t and returns it.
+ * representation.  This allocates a Map and returns it.
  */
-map_t*
+MapPtr
 AmclNode::convertMap( const nav_msgs::OccupancyGrid& map_msg )
 {
-  map_t* map = map_alloc();
+  TRACE_FUNC_ENTER
+  MapPtr map = CreateMap();
   ROS_ASSERT(map);
 
   map->size_x = map_msg.info.width;
@@ -909,23 +932,26 @@ AmclNode::convertMap( const nav_msgs::OccupancyGrid& map_msg )
   map->origin_x = map_msg.info.origin.position.x + (map->size_x / 2) * map->scale;
   map->origin_y = map_msg.info.origin.position.y + (map->size_y / 2) * map->scale;
   // Convert to player format
-  map->cells = (map_cell_t*)malloc(sizeof(map_cell_t)*map->size_x*map->size_y);
-  ROS_ASSERT(map->cells);
+  //map->cells = (MapCell*)malloc(sizeof(MapCell)*map->size_x*map->size_y);
+  map->cells.resize(map->size_x * map->size_y);
+  std::fill(map->cells.begin(), map->cells.end(), std::make_shared<Cell>());
+  ROS_ASSERT(!map->cells.empty());
   for(int i=0;i<map->size_x * map->size_y;i++)
   {
     if(map_msg.data[i] == 0)
-      map->cells[i].occ_state = -1;
+      map->cells[i]->occ_state = -1;
     else if(map_msg.data[i] == 100)
-      map->cells[i].occ_state = +1;
+      map->cells[i]->occ_state = +1;
     else
-      map->cells[i].occ_state = 0;
+      map->cells[i]->occ_state = 0;
   }
-
+  TRACE_FUNC_EXIT
   return map;
 }
 
 AmclNode::~AmclNode()
 {
+  TRACE_FUNC_ENTER
   delete dsrv_;
   freeMapDependentMemory();
   delete laser_scan_filter_;
@@ -933,6 +959,7 @@ AmclNode::~AmclNode()
   delete tfb_;
   delete tf_;
   // TODO: delete everything allocated in constructor
+  TRACE_FUNC_EXIT
 }
 
 bool
@@ -940,6 +967,7 @@ AmclNode::getOdomPose(tf::Stamped<tf::Pose>& odom_pose,
                       double& x, double& y, double& yaw,
                       const ros::Time& t, const std::string& f)
 {
+  TRACE_FUNC_ENTER
   // Get the robot's pose
   tf::Stamped<tf::Pose> ident (tf::Transform(tf::createIdentityQuaternion(),
                                            tf::Vector3(0,0,0)), t, f);
@@ -956,7 +984,7 @@ AmclNode::getOdomPose(tf::Stamped<tf::Pose>& odom_pose,
   y = odom_pose.getOrigin().y();
   double pitch,roll;
   odom_pose.getBasis().getEulerYPR(yaw, pitch, roll);
-
+  TRACE_FUNC_EXIT
   return true;
 }
 
@@ -964,13 +992,16 @@ AmclNode::getOdomPose(tf::Stamped<tf::Pose>& odom_pose,
 pf_vector_t
 AmclNode::uniformPoseGenerator(void* arg)
 {
-  map_t* map = (map_t*)arg;
+  TRACE_FUNC_ENTER
+  //MapPtr map = (MapPtr)arg;
+  Map* map_raw = (Map*)arg;
+  MapPtr map = std::make_shared<Map>(*map_raw);
 #if NEW_UNIFORM_SAMPLING
   unsigned int rand_index = drand48() * free_space_indices.size();
   std::pair<int,int> free_point = free_space_indices[rand_index];
   pf_vector_t p;
-  p.v[0] = MAP_WXGX(map, free_point.first);
-  p.v[1] = MAP_WYGY(map, free_point.second);
+  p.v[0] = map->toWorldX(free_point.first);
+  p.v[1] = map->toWorldY(free_point.second);
   p.v[2] = drand48() * 2 * M_PI - M_PI;
 #else
   double min_x, max_x, min_y, max_y;
@@ -992,10 +1023,11 @@ AmclNode::uniformPoseGenerator(void* arg)
     int i,j;
     i = MAP_GXWX(map, p.v[0]);
     j = MAP_GYWY(map, p.v[1]);
-    if(MAP_VALID(map,i,j) && (map->cells[MAP_INDEX(map,i,j)].occ_state == -1))
+    if(MAP_VALID(map,i,j) && (map->cells[map->toIndex(i,j)].occ_state == -1))
       break;
   }
 #endif
+  TRACE_FUNC_EXIT
   return p;
 }
 
@@ -1003,41 +1035,48 @@ bool
 AmclNode::globalLocalizationCallback(std_srvs::Empty::Request& req,
                                      std_srvs::Empty::Response& res)
 {
+  TRACE_FUNC_ENTER
   if( map_ == NULL ) {
     return true;
   }
   boost::recursive_mutex::scoped_lock gl(configuration_mutex_);
   ROS_INFO("Initializing with uniform distribution");
   pf_init_model(pf_, (pf_init_model_fn_t)AmclNode::uniformPoseGenerator,
-                (void *)map_);
+                (void *)map_.get());
   ROS_INFO("Global initialisation done!");
   pf_init_ = false;
+  TRACE_FUNC_EXIT
   return true;
 }
 
 // force nomotion updates (amcl updating without requiring motion)
-bool 
+bool
 AmclNode::nomotionUpdateCallback(std_srvs::Empty::Request& req,
                                      std_srvs::Empty::Response& res)
 {
-	m_force_update = true;
-	//ROS_INFO("Requesting no-motion update");
-	return true;
+  TRACE_FUNC_ENTER
+        m_force_update = true;
+        //ROS_INFO("Requesting no-motion update");
+  TRACE_FUNC_EXIT
+        return true;
 }
 
 bool
 AmclNode::setMapCallback(nav_msgs::SetMap::Request& req,
                          nav_msgs::SetMap::Response& res)
 {
+  TRACE_FUNC_ENTER
   handleMapMessage(req.map);
   handleInitialPoseMessage(req.initial_pose);
   res.success = true;
+  TRACE_FUNC_EXIT
   return true;
 }
 
 void
 AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 {
+  TRACE_FUNC_ENTER
   last_laser_received_ts_ = ros::Time::now();
   if( map_ == NULL ) {
     return;
@@ -1049,7 +1088,8 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
   if(frame_to_laser_.find(laser_scan->header.frame_id) == frame_to_laser_.end())
   {
     ROS_DEBUG("Setting up laser %d (frame_id=%s)\n", (int)frame_to_laser_.size(), laser_scan->header.frame_id.c_str());
-    lasers_.push_back(new AMCLLaser(*laser_));
+    //lasers_.push_back(new AMCLLaser(*laser_));
+    lasers_.push_back(laser_);
     lasers_update_.push_back(true);
     laser_index = frame_to_laser_.size();
 
@@ -1096,8 +1136,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     return;
   }
 
-
-  pf_vector_t delta = pf_vector_zero();
+  pf_vector_t delta = pf_vector_zero();TRACE_FUNC
 
   if(pf_init_)
   {
@@ -1120,7 +1159,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
         lasers_update_[i] = true;
   }
 
-  bool force_publication = false;
+  bool force_publication = false;TRACE_FUNC
   if(!pf_init_)
   {
     // Pose at last filter update
@@ -1161,25 +1200,25 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
   // If the robot has moved, update the filter
   if(lasers_update_[laser_index])
   {
-    AMCLLaserData ldata;
-    ldata.sensor = lasers_[laser_index];
-    ldata.range_count = laser_scan->ranges.size();
+    AMCLLaserData ldata;TRACE_FUNC
+    ldata.sensor = lasers_[laser_index];TRACE_FUNC
+    ldata.range_count = laser_scan->ranges.size();TRACE_FUNC
 
     // To account for lasers that are mounted upside-down, we determine the
     // min, max, and increment angles of the laser in the base frame.
     //
     // Construct min and max angles of laser, in the base_link frame.
     tf::Quaternion q;
-    q.setRPY(0.0, 0.0, laser_scan->angle_min);
+    q.setRPY(0.0, 0.0, laser_scan->angle_min);TRACE_FUNC
     tf::Stamped<tf::Quaternion> min_q(q, laser_scan->header.stamp,
-                                      laser_scan->header.frame_id);
-    q.setRPY(0.0, 0.0, laser_scan->angle_min + laser_scan->angle_increment);
+                                      laser_scan->header.frame_id);TRACE_FUNC
+    q.setRPY(0.0, 0.0, laser_scan->angle_min + laser_scan->angle_increment);TRACE_FUNC
     tf::Stamped<tf::Quaternion> inc_q(q, laser_scan->header.stamp,
-                                      laser_scan->header.frame_id);
+                                      laser_scan->header.frame_id);TRACE_FUNC
     try
     {
-      tf_->transformQuaternion(base_frame_id_, min_q, min_q);
-      tf_->transformQuaternion(base_frame_id_, inc_q, inc_q);
+      tf_->transformQuaternion(base_frame_id_, min_q, min_q);TRACE_FUNC
+      tf_->transformQuaternion(base_frame_id_, inc_q, inc_q);TRACE_FUNC
     }
     catch(tf::TransformException& e)
     {
@@ -1197,15 +1236,19 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     ROS_DEBUG("Laser %d angles in base frame: min: %.3f inc: %.3f", laser_index, angle_min, angle_increment);
 
     // Apply range min/max thresholds, if the user supplied them
-    if(laser_max_range_ > 0.0)
-      ldata.range_max = std::min(laser_scan->range_max, (float)laser_max_range_);
-    else
-      ldata.range_max = laser_scan->range_max;
+    if(laser_max_range_ > 0.0) {
+      ldata.range_max = std::min(laser_scan->range_max, (float)laser_max_range_);TRACE_FUNC
+    }
+    else {
+      ldata.range_max = laser_scan->range_max;TRACE_FUNC
+    }
     double range_min;
-    if(laser_min_range_ > 0.0)
-      range_min = std::max(laser_scan->range_min, (float)laser_min_range_);
-    else
+    if(laser_min_range_ > 0.0) {
+      range_min = std::max(laser_scan->range_min, (float)laser_min_range_);TRACE_FUNC
+    } else {
       range_min = laser_scan->range_min;
+    }
+    TRACE_FUNC
     // The AMCLLaserData destructor will free this memory
     ldata.ranges = new double[ldata.range_count][2];
     ROS_ASSERT(ldata.ranges);
@@ -1221,9 +1264,10 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
       ldata.ranges[i][1] = angle_min +
               (i * angle_increment);
     }
-
+TRACE_FUNC
     lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
-
+    //lasers_[laser_index]->UpdateSensor(pf_, std::make_shared<AMCLSensorData>(ldata));
+TRACE_FUNC
     lasers_update_[laser_index] = false;
 
     pf_odom_pose_ = pose;
@@ -1235,7 +1279,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
       resampled = true;
     }
 
-    pf_sample_set_t* set = pf_->sets + pf_->current_set;
+    pf_sample_set_t* set = pf_->sets + pf_->current_set;TRACE_FUNC
     ROS_DEBUG("Num samples: %d\n", set->sample_count);
 
     // Publish the resulting cloud
@@ -1409,26 +1453,31 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
       save_pose_last_time = now;
     }
   }
-
+  TRACE_FUNC_EXIT
 }
 
 double
 AmclNode::getYaw(tf::Pose& t)
 {
+  TRACE_FUNC_ENTER
   double yaw, pitch, roll;
   t.getBasis().getEulerYPR(yaw,pitch,roll);
+  TRACE_FUNC_EXIT
   return yaw;
 }
 
 void
 AmclNode::initialPoseReceived(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg)
 {
+  TRACE_FUNC_ENTER
   handleInitialPoseMessage(*msg);
+  TRACE_FUNC_EXIT
 }
 
 void
 AmclNode::handleInitialPoseMessage(const geometry_msgs::PoseWithCovarianceStamped& msg)
 {
+  TRACE_FUNC_ENTER
   boost::recursive_mutex::scoped_lock prl(configuration_mutex_);
   if(msg.header.frame_id == "")
   {
@@ -1501,6 +1550,7 @@ AmclNode::handleInitialPoseMessage(const geometry_msgs::PoseWithCovarianceStampe
   initial_pose_hyp_->pf_pose_mean = pf_init_pose_mean;
   initial_pose_hyp_->pf_pose_cov = pf_init_pose_cov;
   applyInitialPose();
+  TRACE_FUNC_EXIT
 }
 
 /**
@@ -1511,6 +1561,7 @@ AmclNode::handleInitialPoseMessage(const geometry_msgs::PoseWithCovarianceStampe
 void
 AmclNode::applyInitialPose()
 {
+  TRACE_FUNC_ENTER
   boost::recursive_mutex::scoped_lock cfl(configuration_mutex_);
   if( initial_pose_hyp_ != NULL && map_ != NULL ) {
     pf_init(pf_, initial_pose_hyp_->pf_pose_mean, initial_pose_hyp_->pf_pose_cov);
@@ -1519,4 +1570,5 @@ AmclNode::applyInitialPose()
     delete initial_pose_hyp_;
     initial_pose_hyp_ = NULL;
   }
+  TRACE_FUNC_EXIT
 }

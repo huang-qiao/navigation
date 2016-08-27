@@ -17,7 +17,7 @@ static double hypot2(double x, double y) {
 
 // Symmetric Householder reduction to tridiagonal form.
 
-static void tred2(double V[n][n], double d[n], double e[n]) {
+static void tred2(double **V, double *d, double *e) {
 
 //  This is derived from the Algol procedures tred2 by
 //  Bowdler, Martin, Reinsch, and Wilkinson, Handbook for
@@ -132,11 +132,11 @@ static void tred2(double V[n][n], double d[n], double e[n]) {
   }
   V[n-1][n-1] = 1.0;
   e[0] = 0.0;
-} 
+}
 
 // Symmetric tridiagonal QL algorithm.
 
-static void tql2(double V[n][n], double d[n], double e[n]) {
+static void tql2(double **V, double *d, double *e) {
 
 //  This is derived from the Algol procedures tql2, by
 //  Bowdler, Martin, Reinsch, and Wilkinson, Handbook for
@@ -234,7 +234,7 @@ static void tql2(double V[n][n], double d[n], double e[n]) {
     d[l] = d[l] + f;
     e[l] = 0.0;
   }
-  
+
   // Sort eigenvalues and corresponding vectors.
 
   for (i = 0; i < n-1; i++) {
@@ -258,7 +258,7 @@ static void tql2(double V[n][n], double d[n], double e[n]) {
   }
 }
 
-void eigen_decomposition(double A[n][n], double V[n][n], double d[n]) {
+void eigen_decomposition(double **A, double **V, double *d) {
   int i,j;
   double e[n];
   for (i = 0; i < n; i++) {

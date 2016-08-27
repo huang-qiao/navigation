@@ -1,6 +1,17 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(amcl)
 
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
+if(COMPILER_SUPPORTS_CXX11)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+elseif(COMPILER_SUPPORTS_CXX0X)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+else()
+  message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+endif()
+
 find_package(catkin REQUIRED
         COMPONENTS
             rosbag
@@ -31,18 +42,18 @@ include_directories(include/amcl include/amcl/map include/amcl/sensors include/a
 include_directories(${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
 add_library(amcl_pf
-                    src/amcl/pf/pf.c
-                    src/amcl/pf/pf_kdtree.c
-                    src/amcl/pf/pf_pdf.c
-                    src/amcl/pf/pf_vector.c
-                    src/amcl/pf/eig3.c
+                    src/amcl/pf/pf.cpp
+                    src/amcl/pf/pf_kdtree.cpp
+                    src/amcl/pf/pf_pdf.cpp
+                    src/amcl/pf/pf_vector.cpp
+                    src/amcl/pf/eig3.cpp
                     src/amcl/pf/pf_draw.c)
 
 add_library(amcl_map
-                    src/amcl/map/map.c
+                    src/amcl/map/map.cpp
                     src/amcl/map/map_cspace.cpp
-                    src/amcl/map/map_range.c
-                    src/amcl/map/map_store.c
+                    src/amcl/map/map_range.cpp
+                    src/amcl/map/map_store.cpp
                     src/amcl/map/map_draw.c)
 
 add_library(amcl_sensors

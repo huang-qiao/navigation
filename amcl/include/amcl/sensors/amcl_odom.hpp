@@ -29,8 +29,8 @@
 #ifndef AMCL_ODOM_H
 #define AMCL_ODOM_H
 
-#include "amcl_sensor.h"
-#include "../pf/pf_pdf.h"
+#include "amcl_sensor.hpp"
+#include "../pf/pf_pdf.hpp"
 
 namespace amcl
 {
@@ -60,14 +60,14 @@ class AMCLOdom : public AMCLSensor
   // Default constructor
   public: AMCLOdom();
 
-  public: void SetModelDiff(double alpha1, 
-                            double alpha2, 
-                            double alpha3, 
+  public: void SetModelDiff(double alpha1,
+                            double alpha2,
+                            double alpha3,
                             double alpha4);
 
-  public: void SetModelOmni(double alpha1, 
-                            double alpha2, 
-                            double alpha3, 
+  public: void SetModelOmni(double alpha1,
+                            double alpha2,
+                            double alpha3,
                             double alpha4,
                             double alpha5);
 
@@ -84,7 +84,7 @@ class AMCLOdom : public AMCLSensor
 
   // Current data timestamp
   private: double time;
-  
+
   // Model type
   private: odom_model_t model_type;
 

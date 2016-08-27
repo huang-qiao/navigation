@@ -25,13 +25,11 @@
  * CVS: $Id: pf_vector.c 6345 2008-04-17 01:36:39Z gerkey $
  *************************************************************************/
 
-#include <math.h>
-//#include <gsl/gsl_matrix.h>
-//#include <gsl/gsl_eigen.h>
-//#include <gsl/gsl_linalg.h>
+#include <cmath>
+#include <cstdlib>
 
-#include "pf_vector.h"
-#include "eig3.h"
+#include "pf_vector.hpp"
+#include "eig3.hpp"
 
 
 // Return a zero vector
@@ -42,7 +40,7 @@ pf_vector_t pf_vector_zero()
   c.v[0] = 0.0;
   c.v[1] = 0.0;
   c.v[2] = 0.0;
-  
+
   return c;
 }
 
@@ -51,11 +49,11 @@ pf_vector_t pf_vector_zero()
 int pf_vector_finite(pf_vector_t a)
 {
   int i;
-  
+
   for (i = 0; i < 3; i++)
     if (!finite(a.v[i]))
       return 0;
-  
+
   return 1;
 }
 
@@ -72,7 +70,7 @@ void pf_vector_fprintf(pf_vector_t a, FILE *file, const char *fmt)
   }
   fprintf(file, "\n");
 
-  return;     
+  return;
 }
 
 
@@ -84,7 +82,7 @@ pf_vector_t pf_vector_add(pf_vector_t a, pf_vector_t b)
   c.v[0] = a.v[0] + b.v[0];
   c.v[1] = a.v[1] + b.v[1];
   c.v[2] = a.v[2] + b.v[2];
-  
+
   return c;
 }
 
@@ -97,7 +95,7 @@ pf_vector_t pf_vector_sub(pf_vector_t a, pf_vector_t b)
   c.v[0] = a.v[0] - b.v[0];
   c.v[1] = a.v[1] - b.v[1];
   c.v[2] = a.v[2] - b.v[2];
-  
+
   return c;
 }
 
@@ -111,7 +109,7 @@ pf_vector_t pf_vector_coord_add(pf_vector_t a, pf_vector_t b)
   c.v[1] = b.v[1] + a.v[0] * sin(b.v[2]) + a.v[1] * cos(b.v[2]);
   c.v[2] = b.v[2] + a.v[2];
   c.v[2] = atan2(sin(c.v[2]), cos(c.v[2]));
-  
+
   return c;
 }
 
@@ -125,7 +123,7 @@ pf_vector_t pf_vector_coord_sub(pf_vector_t a, pf_vector_t b)
   c.v[1] = -(a.v[0] - b.v[0]) * sin(b.v[2]) + (a.v[1] - b.v[1]) * cos(b.v[2]);
   c.v[2] = a.v[2] - b.v[2];
   c.v[2] = atan2(sin(c.v[2]), cos(c.v[2]));
-  
+
   return c;
 }
 
@@ -139,7 +137,7 @@ pf_matrix_t pf_matrix_zero()
   for (i = 0; i < 3; i++)
     for (j = 0; j < 3; j++)
       c.m[i][j] = 0.0;
-        
+
   return c;
 }
 
@@ -148,12 +146,12 @@ pf_matrix_t pf_matrix_zero()
 int pf_matrix_finite(pf_matrix_t a)
 {
   int i, j;
-  
+
   for (i = 0; i < 3; i++)
     for (j = 0; j < 3; j++)
       if (!finite(a.m[i][j]))
         return 0;
-  
+
   return 1;
 }
 
@@ -172,7 +170,7 @@ void pf_matrix_fprintf(pf_matrix_t a, FILE *file, const char *fmt)
     }
     fprintf(file, "\n");
   }
-  return;     
+  return;
 }
 
 
@@ -189,7 +187,7 @@ pf_matrix_t pf_matrix_inverse(pf_matrix_t a, double *det)
 
   A = gsl_matrix_view_array((double*) a.m, 3, 3);
   Ai = gsl_matrix_view_array((double*) ai.m, 3, 3);
-  
+
   // Do LU decomposition
   p = gsl_permutation_alloc(3);
   gsl_linalg_LU_decomp(&A.matrix, p, &signum);
@@ -233,9 +231,16 @@ void pf_matrix_unitary(pf_matrix_t *r, pf_matrix_t *d, pf_matrix_t a)
   evec = gsl_matrix_alloc(3, 3);
   */
 
-  double aa[3][3];
+  double **aa;
   double eval[3];
-  double evec[3][3];
+  double **evec;
+
+  aa = (double**)malloc(3 * sizeof(double*));
+  evec = (double**)malloc(3 * sizeof(double*));
+  for (i = 0; i < 3; i++) {
+    aa[i] = (double*)malloc(3 * sizeof(double));
+    evec[i] = (double*)malloc(3 * sizeof(double));
+  }
 
   for (i = 0; i < 3; i++)
   {
@@ -266,11 +271,11 @@ void pf_matrix_unitary(pf_matrix_t *r, pf_matrix_t *d, pf_matrix_t a)
       r->m[i][j] = evec[i][j];
     }
   }
-  
+
   //gsl_matrix_free(evec);
   //gsl_vector_free(eval);
   //gsl_matrix_free(aa);
-  
+
   return;
 }
 

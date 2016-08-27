@@ -1,38 +1,11 @@
-/*
- *  Player - One Hell of a Robot Server
- *  Copyright (C) 2000  Brian Gerkey   &  Kasper Stoy
- *                      gerkey@usc.edu    kaspers@robotics.usc.edu
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- */
-/**************************************************************************
- * Desc: kd-tree functions
- * Author: Andrew Howard
- * Date: 18 Dec 2002
- * CVS: $Id: pf_kdtree.c 7057 2008-10-02 00:44:06Z gbiggs $
- *************************************************************************/
-
-#include <assert.h>
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cassert>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 
 
-#include "pf_vector.h"
-#include "pf_kdtree.h"
+#include "pf_vector.hpp"
+#include "pf_kdtree.hpp"
 
 
 // Compare keys to see if they are equal
@@ -67,7 +40,7 @@ pf_kdtree_t *pf_kdtree_alloc(int max_size)
 {
   pf_kdtree_t *self;
 
-  self = calloc(1, sizeof(pf_kdtree_t));
+  self = (pf_kdtree_t*)malloc(sizeof(pf_kdtree_t));
 
   self->size[0] = 0.50;
   self->size[1] = 0.50;
@@ -77,7 +50,7 @@ pf_kdtree_t *pf_kdtree_alloc(int max_size)
 
   self->node_count = 0;
   self->node_max_count = max_size;
-  self->nodes = calloc(self->node_max_count, sizeof(pf_kdtree_node_t));
+  self->nodes = (pf_kdtree_node_t*)malloc(self->node_max_count * sizeof(pf_kdtree_node_t));
 
   self->leaf_count = 0;
 
@@ -362,7 +335,7 @@ void pf_kdtree_cluster(pf_kdtree_t *self)
   pf_kdtree_node_t **queue, *node;
 
   queue_count = 0;
-  queue = calloc(self->node_count, sizeof(queue[0]));
+  queue = (pf_kdtree_node_t**)malloc(self->node_count * sizeof(queue[0]));
 
   // Put all the leaves in a queue
   for (i = 0; i < self->node_count; i++)

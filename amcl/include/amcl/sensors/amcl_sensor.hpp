@@ -28,7 +28,7 @@
 #ifndef AMCL_SENSOR_H
 #define AMCL_SENSOR_H
 
-#include "../pf/pf.h"
+#include "../pf/pf.hpp"
 
 namespace amcl
 {
@@ -42,7 +42,7 @@ class AMCLSensor
 {
   // Default constructor
   public: AMCLSensor();
-         
+
   // Default destructor
   public: virtual ~AMCLSensor();
 

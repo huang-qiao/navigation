@@ -38,11 +38,11 @@
 
 ////////////////////////////////////////////////////////////////////////////
 // Draw the occupancy map
-void map_draw_occ(map_t *map, rtk_fig_t *fig)
+void map_draw_occ(MapPtr map, rtk_fig_t *fig)
 {
   int i, j;
   int col;
-  map_cell_t *cell;
+  CellPtr cell;
   uint16_t *image;
   uint16_t *pixel;
 
@@ -73,11 +73,11 @@ void map_draw_occ(map_t *map, rtk_fig_t *fig)
 
 ////////////////////////////////////////////////////////////////////////////
 // Draw the cspace map
-void map_draw_cspace(map_t *map, rtk_fig_t *fig)
+void map_draw_cspace(MapPtr map, rtk_fig_t *fig)
 {
   int i, j;
   int col;
-  map_cell_t *cell;
+  CellPtr cell;
   uint16_t *image;
   uint16_t *pixel;
 
@@ -109,11 +109,11 @@ void map_draw_cspace(map_t *map, rtk_fig_t *fig)
 
 ////////////////////////////////////////////////////////////////////////////
 // Draw a wifi map
-void map_draw_wifi(map_t *map, rtk_fig_t *fig, int index)
+void map_draw_wifi(MapPtr map, rtk_fig_t *fig, int index)
 {
   int i, j;
   int level, col;
-  map_cell_t *cell;
+  CellPtr cell;
   uint16_t *image, *mask;
   uint16_t *ipix, *mpix;
 

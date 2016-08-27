@@ -1,38 +1,11 @@
-/*
- *  Player - One Hell of a Robot Server
- *  Copyright (C) 2000  Brian Gerkey   &  Kasper Stoy
- *                      gerkey@usc.edu    kaspers@robotics.usc.edu
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- */
-/**************************************************************************
- * Desc: Useful pdf functions
- * Author: Andrew Howard
- * Date: 10 Dec 2002
- * CVS: $Id: pf_pdf.c 6348 2008-04-17 02:53:17Z gerkey $
- *************************************************************************/
-
-#include <assert.h>
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cassert>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 //#include <gsl/gsl_rng.h>
 //#include <gsl/gsl_randist.h>
 
-#include "pf_pdf.h"
+#include "pf_pdf.hpp"
 
 // Random number generator seed value
 static unsigned int pf_pdf_seed;
@@ -48,7 +21,7 @@ pf_pdf_gaussian_t *pf_pdf_gaussian_alloc(pf_vector_t x, pf_matrix_t cx)
   pf_matrix_t cd;
   pf_pdf_gaussian_t *pdf;
 
-  pdf = calloc(1, sizeof(pf_pdf_gaussian_t));
+  pdf = (pf_pdf_gaussian_t*)malloc(sizeof(pf_pdf_gaussian_t));
 
   pdf->x = x;
   pdf->cx = cx;
@@ -86,7 +59,7 @@ double pf_pdf_gaussian_value(pf_pdf_gaussian_t *pdf, pf_vector_t x)
   int i, j;
   pf_vector_t z;
   double zz, p;
-  
+
   z = pf_vector_sub(x, pdf->x);
 
   zz = 0;
@@ -95,7 +68,7 @@ double pf_pdf_gaussian_value(pf_pdf_gaussian_t *pdf, pf_vector_t x)
       zz += z.v[i] * pdf->cxi.m[i][j] * z.v[j];
 
   p =  1 / (2 * M_PI * pdf->cxdet) * exp(-zz / 2);
-          
+
   return p;
 }
 */
@@ -120,8 +93,8 @@ pf_vector_t pf_pdf_gaussian_sample(pf_pdf_gaussian_t *pdf)
     x.v[i] = pdf->x.v[i];
     for (j = 0; j < 3; j++)
       x.v[i] += pdf->cr.m[i][j] * r.v[j];
-  } 
-  
+  }
+
   return x;
 }
 
@@ -165,7 +138,7 @@ pf_pdf_discrete_t *pf_pdf_discrete_alloc(int count, double *probs)
   pdf->prob_count = count;
   pdf->probs = malloc(count * sizeof(double));
   memcpy(pdf->probs, probs, count * sizeof(double));
-  
+
   // Initialize the random number generator
   pdf->rng = gsl_rng_alloc(gsl_rng_taus);
   gsl_rng_set(pdf->rng, ++pf_pdf_seed);
@@ -182,7 +155,7 @@ void pf_pdf_discrete_free(pf_pdf_discrete_t *pdf)
 {
   gsl_ran_discrete_free(pdf->ran);
   gsl_rng_free(pdf->rng);
-  free(pdf->probs);  
+  free(pdf->probs);
   free(pdf);
   return;
 }
@@ -199,7 +172,7 @@ double pf_pdf_discrete_value(pf_pdf_discrete_t *pdf, int i)
 int pf_pdf_discrete_sample(pf_pdf_discrete_t *pdf)
 {
   int i;
-  
+
   i = gsl_ran_discrete(pdf->rng, pdf->ran);
   assert(i >= 0 && i < pdf->prob_count);
 
