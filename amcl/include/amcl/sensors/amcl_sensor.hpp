@@ -36,7 +36,7 @@ public:
   bool is_action;
 
   // Action pose (action sensors only)
-  pf_vector_t pose;
+  Pose pose;
 
   // AMCL Base
   //protected: AdaptiveMCL & AMCL;

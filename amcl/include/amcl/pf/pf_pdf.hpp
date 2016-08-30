@@ -10,14 +10,14 @@
 typedef struct
 {
   // Mean, covariance and inverse covariance
-  pf_vector_t x;
-  pf_matrix_t cx;
-  //pf_matrix_t cxi;
+  Pose x;
+  Covariance cx;
+  //Covariance cxi;
   double cxdet;
 
   // Decomposed covariance matrix (rotation * diagonal)
-  pf_matrix_t cr;
-  pf_vector_t cd;
+  Covariance cr;
+  Pose cd;
 
   // A random number generator
   //gsl_rng *rng;
@@ -26,7 +26,7 @@ typedef struct
 
 
 // Create a gaussian pdf
-pf_pdf_gaussian_t *pf_pdf_gaussian_alloc(pf_vector_t x, pf_matrix_t cx);
+pf_pdf_gaussian_t *pf_pdf_gaussian_alloc(Pose x, Covariance cx);
 
 // Destroy the pdf
 void pf_pdf_gaussian_free(pf_pdf_gaussian_t *pdf);
@@ -41,7 +41,7 @@ void pf_pdf_gaussian_free(pf_pdf_gaussian_t *pdf);
 double pf_ran_gaussian(double sigma);
 
 // Generate a sample from the the pdf.
-pf_vector_t pf_pdf_gaussian_sample(pf_pdf_gaussian_t *pdf);
+Pose pf_pdf_gaussian_sample(pf_pdf_gaussian_t *pdf);
 
 
 #if 0

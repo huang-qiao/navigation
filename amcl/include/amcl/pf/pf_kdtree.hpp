@@ -54,16 +54,16 @@ extern void pf_kdtree_free(pf_kdtree_t *self);
 extern void pf_kdtree_clear(pf_kdtree_t *self);
 
 // Insert a pose into the tree
-extern void pf_kdtree_insert(pf_kdtree_t *self, pf_vector_t pose, double value);
+extern void pf_kdtree_insert(pf_kdtree_t *self, Pose pose, double value);
 
 // Cluster the leaves in the tree
 extern void pf_kdtree_cluster(pf_kdtree_t *self);
 
 // Determine the probability estimate for the given pose
-extern double pf_kdtree_get_prob(pf_kdtree_t *self, pf_vector_t pose);
+extern double pf_kdtree_get_prob(pf_kdtree_t *self, Pose pose);
 
 // Determine the cluster label for the given pose
-extern int pf_kdtree_get_cluster(pf_kdtree_t *self, pf_vector_t pose);
+extern int pf_kdtree_get_cluster(pf_kdtree_t *self, Pose pose);
 
 
 #ifdef INCLUDE_RTKGUI

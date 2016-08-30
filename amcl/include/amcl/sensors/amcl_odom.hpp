@@ -18,10 +18,10 @@ enum class OdomModel
 struct AMCLOdomData : public AMCLSensorData
 {
   // Odometric pose
-  pf_vector_t pose;
+  Pose pose;
 
   // Change in odometric pose
-  pf_vector_t delta;
+  Pose delta;
 };
 
 using AMCLOdomDataPtr = std::shared_ptr<AMCLOdomData>;

@@ -75,10 +75,10 @@ typedef struct
   double weight;
 
   // Mean of pose esimate
-  pf_vector_t pf_pose_mean;
+  Pose pf_pose_mean;
 
   // Covariance of pose estimate
-  pf_matrix_t pf_pose_cov;
+  Covariance pf_pose_cov;
 
 } amcl_hyp_t;
 
@@ -137,7 +137,7 @@ class AmclNode
 
     // Pose-generating function used to uniformly distribute particles over
     // the map
-    static pf_vector_t uniformPoseGenerator(void* arg);
+    static Pose uniformPoseGenerator(void* arg);
 #if NEW_UNIFORM_SAMPLING
     static std::vector<std::pair<int,int> > free_space_indices;
 #endif
@@ -197,7 +197,7 @@ class AmclNode
     pf_t *pf_;
     double pf_err_, pf_z_;
     bool pf_init_;
-    pf_vector_t pf_odom_pose_;
+    Pose pf_odom_pose_;
     double d_thresh_, a_thresh_;
     int resample_interval_;
     int resample_count_;
@@ -546,11 +546,11 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   pf_->pop_z = pf_z_;
 
   // Initialize the filter
-  pf_vector_t pf_init_pose_mean = pf_vector_zero();
+  Pose pf_init_pose_mean = Pose(0.0, 0.0, 0.0); // pf_vector_zero();
   pf_init_pose_mean.v[0] = last_published_pose.pose.pose.position.x;
   pf_init_pose_mean.v[1] = last_published_pose.pose.pose.position.y;
   pf_init_pose_mean.v[2] = tf::getYaw(last_published_pose.pose.pose.orientation);
-  pf_matrix_t pf_init_pose_cov = pf_matrix_zero();
+  Covariance pf_init_pose_cov = Covariance(); // pf_matrix_zero();
   pf_init_pose_cov.m[0][0] = last_published_pose.pose.covariance[6*0+0];
   pf_init_pose_cov.m[1][1] = last_published_pose.pose.covariance[6*1+1];
   pf_init_pose_cov.m[2][2] = last_published_pose.pose.covariance[6*5+5];
@@ -844,11 +844,11 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
 
   // Initialize the filter
   updatePoseFromServer();
-  pf_vector_t pf_init_pose_mean = pf_vector_zero();
+  Pose pf_init_pose_mean = Pose(0.0, 0.0, 0.0); // pf_vector_zero();
   pf_init_pose_mean.v[0] = init_pose_[0];
   pf_init_pose_mean.v[1] = init_pose_[1];
   pf_init_pose_mean.v[2] = init_pose_[2];
-  pf_matrix_t pf_init_pose_cov = pf_matrix_zero();
+  Covariance pf_init_pose_cov = Covariance(); // pf_matrix_zero();
   pf_init_pose_cov.m[0][0] = init_cov_[0];
   pf_init_pose_cov.m[1][1] = init_cov_[1];
   pf_init_pose_cov.m[2][2] = init_cov_[2];
@@ -983,7 +983,7 @@ AmclNode::getOdomPose(tf::Stamped<tf::Pose>& odom_pose,
 }
 
 
-pf_vector_t
+Pose
 AmclNode::uniformPoseGenerator(void* arg)
 {
   TRACE_FUNC_ENTER
@@ -993,7 +993,7 @@ AmclNode::uniformPoseGenerator(void* arg)
 #if NEW_UNIFORM_SAMPLING
   unsigned int rand_index = drand48() * free_space_indices.size();
   std::pair<int,int> free_point = free_space_indices[rand_index];
-  pf_vector_t p;
+  Pose p;
   p.v[0] = map->toWorldX(free_point.first);
   p.v[1] = map->toWorldY(free_point.second);
   p.v[2] = drand48() * 2 * M_PI - M_PI;
@@ -1005,7 +1005,7 @@ AmclNode::uniformPoseGenerator(void* arg)
   min_y = (map->size_y * map->scale)/2.0 - map->origin_y;
   max_y = (map->size_y * map->scale)/2.0 + map->origin_y;
 
-  pf_vector_t p;
+  Pose p;
 
   ROS_DEBUG("Generating new uniform sample");
   for(;;)
@@ -1104,7 +1104,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
       return;
     }
 
-    pf_vector_t laser_pose_v;
+    Pose laser_pose_v;
     laser_pose_v.v[0] = laser_pose.getOrigin().x();
     laser_pose_v.v[1] = laser_pose.getOrigin().y();
     // laser mounting angle gets computed later -> set to 0 here!
@@ -1122,7 +1122,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
   }
 
   // Where was the robot when this scan was taken?
-  pf_vector_t pose;
+  Pose pose;
   if(!getOdomPose(latest_odom_pose_, pose.v[0], pose.v[1], pose.v[2],
                   laser_scan->header.stamp, base_frame_id_))
   {
@@ -1130,7 +1130,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     return;
   }
 
-  pf_vector_t delta = pf_vector_zero();TRACE_FUNC
+  Pose delta = Pose(0.0, 0.0, 0.0); TRACE_FUNC // pf_vector_zero();
 
   if(pf_init_)
   {
@@ -1327,8 +1327,8 @@ TRACE_FUNC
         hyp_count < pf_->sets[pf_->current_set].cluster_count; hyp_count++)
     {
       double weight;
-      pf_vector_t pose_mean;
-      pf_matrix_t pose_cov;
+      Pose pose_mean;
+      Covariance pose_cov;
       if (!pf_get_cluster_stats(pf_, hyp_count, &weight, &pose_mean, &pose_cov))
       {
         ROS_ERROR("Couldn't get stats on cluster %d", hyp_count);
@@ -1546,11 +1546,11 @@ AmclNode::handleInitialPoseMessage(const geometry_msgs::PoseWithCovarianceStampe
            pose_new.getOrigin().y(),
            getYaw(pose_new));
   // Re-initialize the filter
-  pf_vector_t pf_init_pose_mean = pf_vector_zero();
+  Pose pf_init_pose_mean = Pose(0.0, 0.0, 0.0); // pf_vector_zero();
   pf_init_pose_mean.v[0] = pose_new.getOrigin().x();
   pf_init_pose_mean.v[1] = pose_new.getOrigin().y();
   pf_init_pose_mean.v[2] = getYaw(pose_new);
-  pf_matrix_t pf_init_pose_cov = pf_matrix_zero();
+  Covariance pf_init_pose_cov = Covariance(); // pf_matrix_zero();
   // Copy in the covariance, converting from 6-D to 3-D
   for(int i=0; i<2; i++)
   {

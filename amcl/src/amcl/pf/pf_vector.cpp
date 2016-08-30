@@ -1,30 +1,3 @@
-/*
- *  Player - One Hell of a Robot Server
- *  Copyright (C) 2000  Brian Gerkey   &  Kasper Stoy
- *                      gerkey@usc.edu    kaspers@robotics.usc.edu
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- */
-/**************************************************************************
- * Desc: Vector functions
- * Author: Andrew Howard
- * Date: 10 Dec 2002
- * CVS: $Id: pf_vector.c 6345 2008-04-17 01:36:39Z gerkey $
- *************************************************************************/
-
 #include <cmath>
 #include <cstdlib>
 
@@ -33,39 +6,34 @@
 
 
 // Return a zero vector
-pf_vector_t pf_vector_zero()
+//Pose pf_vector_zero()
+Pose::Pose(const double &x, const double &y, const double &a)
 {
-  pf_vector_t c;
-
-  c.v[0] = 0.0;
-  c.v[1] = 0.0;
-  c.v[2] = 0.0;
-
-  return c;
+  v[0] = x;
+  v[1] = y;
+  v[2] = a;
 }
 
 
 // Check for NAN or INF in any component
-int pf_vector_finite(pf_vector_t a)
+//int pf_vector_finite(Pose a)
+bool Pose::isFinite()
 {
-  int i;
-
-  for (i = 0; i < 3; i++)
-    if (!finite(a.v[i]))
-      return 0;
-
-  return 1;
+  for (size_t i = 0; i < 3; i++) {
+    if (!finite(v[i])) {
+      return false;
+    }
+  }
+  return true;
 }
 
 
 // Print a vector
-void pf_vector_fprintf(pf_vector_t a, FILE *file, const char *fmt)
+//void pf_vector_fprintf(Pose a, FILE *file, const char *fmt)
+void Pose::dumpToFile(FILE *file, const char *fmt)
 {
-  int i;
-
-  for (i = 0; i < 3; i++)
-  {
-    fprintf(file, fmt, a.v[i]);
+  for (size_t i = 0; i < 3; i++) {
+    fprintf(file, fmt, v[i]);
     fprintf(file, " ");
   }
   fprintf(file, "\n");
@@ -75,9 +43,10 @@ void pf_vector_fprintf(pf_vector_t a, FILE *file, const char *fmt)
 
 
 // Simple vector addition
-pf_vector_t pf_vector_add(pf_vector_t a, pf_vector_t b)
+//Pose pf_vector_add(Pose a, Pose b)
+Pose Pose::Sum(const Pose &a, const Pose &b)
 {
-  pf_vector_t c;
+  Pose c;
 
   c.v[0] = a.v[0] + b.v[0];
   c.v[1] = a.v[1] + b.v[1];
@@ -88,9 +57,10 @@ pf_vector_t pf_vector_add(pf_vector_t a, pf_vector_t b)
 
 
 // Simple vector subtraction
-pf_vector_t pf_vector_sub(pf_vector_t a, pf_vector_t b)
+//Pose pf_vector_sub(Pose a, Pose b)
+Pose Pose::Sub(const Pose &a, const Pose &b)
 {
-  pf_vector_t c;
+  Pose c;
 
   c.v[0] = a.v[0] - b.v[0];
   c.v[1] = a.v[1] - b.v[1];
@@ -101,9 +71,10 @@ pf_vector_t pf_vector_sub(pf_vector_t a, pf_vector_t b)
 
 
 // Transform from local to global coords (a + b)
-pf_vector_t pf_vector_coord_add(pf_vector_t a, pf_vector_t b)
+//Pose pf_vector_coord_add(Pose a, Pose b)
+Pose Pose::CoordSum(const Pose &a, const Pose &b)
 {
-  pf_vector_t c;
+  Pose c;
 
   c.v[0] = b.v[0] + a.v[0] * cos(b.v[2]) - a.v[1] * sin(b.v[2]);
   c.v[1] = b.v[1] + a.v[0] * sin(b.v[2]) + a.v[1] * cos(b.v[2]);
@@ -115,9 +86,10 @@ pf_vector_t pf_vector_coord_add(pf_vector_t a, pf_vector_t b)
 
 
 // Transform from global to local coords (a - b)
-pf_vector_t pf_vector_coord_sub(pf_vector_t a, pf_vector_t b)
+//Pose pf_vector_coord_sub(Pose a, Pose b)
+Pose Pose::CoordSub(const Pose &a, const Pose &b)
 {
-  pf_vector_t c;
+  Pose c;
 
   c.v[0] = +(a.v[0] - b.v[0]) * cos(b.v[2]) + (a.v[1] - b.v[1]) * sin(b.v[2]);
   c.v[1] = -(a.v[0] - b.v[0]) * sin(b.v[2]) + (a.v[1] - b.v[1]) * cos(b.v[2]);
@@ -129,35 +101,43 @@ pf_vector_t pf_vector_coord_sub(pf_vector_t a, pf_vector_t b)
 
 
 // Return a zero matrix
-pf_matrix_t pf_matrix_zero()
+//Covariance pf_matrix_zero()
+Covariance::Covariance()
 {
-  int i, j;
-  pf_matrix_t c;
+  //int i, j;
+  //Covariance c;
 
-  for (i = 0; i < 3; i++)
-    for (j = 0; j < 3; j++)
-      c.m[i][j] = 0.0;
+  for (size_t i = 0; i < 3; i++) {
+    for (size_t j = 0; j < 3; j++) {
+      m[i][j] = 0.0; // c.m[i][j] = 0.0;
+    }
+  }
 
-  return c;
+  //return c;
 }
 
 
 // Check for NAN or INF in any component
-int pf_matrix_finite(pf_matrix_t a)
+//int pf_matrix_finite(Covariance a)
+bool Covariance::isFinite()
 {
-  int i, j;
+  //int i, j;
 
-  for (i = 0; i < 3; i++)
-    for (j = 0; j < 3; j++)
-      if (!finite(a.m[i][j]))
-        return 0;
+  for (size_t i = 0; i < 3; i++) {
+    for (size_t j = 0; j < 3; j++) {
+      if (!finite(m[i][j])) {
+        return false;
+      }
+    }
+  }
 
-  return 1;
+  return true;
 }
 
 
 // Print a matrix
-void pf_matrix_fprintf(pf_matrix_t a, FILE *file, const char *fmt)
+//void pf_matrix_fprintf(Covariance a, FILE *file, const char *fmt)
+void Covariance::dumpToFile(FILE *file, const char *fmt)
 {
   int i, j;
 
@@ -165,7 +145,7 @@ void pf_matrix_fprintf(pf_matrix_t a, FILE *file, const char *fmt)
   {
     for (j = 0; j < 3; j++)
     {
-      fprintf(file, fmt, a.m[i][j]);
+      fprintf(file, fmt, m[i][j]);
       fprintf(file, " ");
     }
     fprintf(file, "\n");
@@ -176,14 +156,14 @@ void pf_matrix_fprintf(pf_matrix_t a, FILE *file, const char *fmt)
 
 /*
 // Compute the matrix inverse
-pf_matrix_t pf_matrix_inverse(pf_matrix_t a, double *det)
+Covariance pf_matrix_inverse(Covariance a, double *det)
 {
   double lndet;
   int signum;
   gsl_permutation *p;
   gsl_matrix_view A, Ai;
 
-  pf_matrix_t ai;
+  Covariance ai;
 
   A = gsl_matrix_view_array((double*) a.m, 3, 3);
   Ai = gsl_matrix_view_array((double*) ai.m, 3, 3);
@@ -217,7 +197,8 @@ pf_matrix_t pf_matrix_inverse(pf_matrix_t a, double *det)
 
 // Decompose a covariance matrix [a] into a rotation matrix [r] and a diagonal
 // matrix [d] such that a = r d r^T.
-void pf_matrix_unitary(pf_matrix_t *r, pf_matrix_t *d, pf_matrix_t a)
+//void pf_matrix_unitary(Covariance *r, Covariance *d, Covariance a)
+void Covariance::unitary(Covariance &r, Covariance &d)
 {
   int i, j;
   /*
@@ -247,7 +228,7 @@ void pf_matrix_unitary(pf_matrix_t *r, pf_matrix_t *d, pf_matrix_t a)
     for (j = 0; j < 3; j++)
     {
       //gsl_matrix_set(aa, i, j, a.m[i][j]);
-      aa[i][j] = a.m[i][j];
+      aa[i][j] = m[i][j]; //aa[i][j] = a.m[i][j];
     }
   }
 
@@ -260,15 +241,15 @@ void pf_matrix_unitary(pf_matrix_t *r, pf_matrix_t *d, pf_matrix_t a)
 
   eigen_decomposition(aa,evec,eval);
 
-  *d = pf_matrix_zero();
+  d = Covariance(); //*d = pf_matrix_zero();
   for (i = 0; i < 3; i++)
   {
     //d->m[i][i] = gsl_vector_get(eval, i);
-    d->m[i][i] = eval[i];
+    d.m[i][i] = eval[i]; //d->m[i][i] = eval[i];
     for (j = 0; j < 3; j++)
     {
       //r->m[i][j] = gsl_matrix_get(evec, i, j);
-      r->m[i][j] = evec[i][j];
+      r.m[i][j] = evec[i][j]; //r->m[i][j] = evec[i][j];
     }
   }
 

@@ -10,7 +10,7 @@ struct _pf_sample_set_t;
 
 // Function prototype for the initialization model; generates a sample pose from
 // an appropriate distribution.
-typedef pf_vector_t (*pf_init_model_fn_t) (void *init_data);
+typedef Pose (*pf_init_model_fn_t) (void *init_data);
 
 // Function prototype for the action model; generates a sample pose from
 // an appropriate distribution
@@ -27,7 +27,7 @@ typedef double (*pf_sensor_model_fn_t) (void *sensor_data,
 typedef struct
 {
   // Pose represented by this sample
-  pf_vector_t pose;
+  Pose pose;
 
   // Weight for this pose
   double weight;
@@ -45,8 +45,8 @@ typedef struct
   double weight;
 
   // Cluster statistics
-  pf_vector_t mean;
-  pf_matrix_t cov;
+  Pose mean;
+  Covariance cov;
 
   // Workspace
   double m[4], c[2][2];
@@ -69,8 +69,8 @@ typedef struct _pf_sample_set_t
   pf_cluster_t *clusters;
 
   // Filter statistics
-  pf_vector_t mean;
-  pf_matrix_t cov;
+  Pose mean;
+  Covariance cov;
   int converged;
 } pf_sample_set_t;
 
@@ -113,7 +113,7 @@ pf_t *pf_alloc(int min_samples, int max_samples,
 void pf_free(pf_t *pf);
 
 // Initialize the filter using a guassian
-void pf_init(pf_t *pf, pf_vector_t mean, pf_matrix_t cov);
+void pf_init(pf_t *pf, Pose mean, Covariance cov);
 
 // Initialize the filter using some model
 void pf_init_model(pf_t *pf, pf_init_model_fn_t init_fn, void *init_data);
@@ -133,12 +133,12 @@ void pf_normalize_weights(pf_t *pf, const double &total_weight);
 void pf_update_resample(pf_t *pf);
 
 // Compute the CEP statistics (mean and variance).
-void pf_get_cep_stats(pf_t *pf, pf_vector_t *mean, double *var);
+void pf_get_cep_stats(pf_t *pf, Pose *mean, double *var);
 
 // Compute the statistics for a particular cluster.  Returns 0 if
 // there is no such cluster.
 int pf_get_cluster_stats(pf_t *pf, int cluster, double *weight,
-                         pf_vector_t *mean, pf_matrix_t *cov);
+                         Pose *mean, Covariance *cov);
 
 // Display the sample set
 void pf_draw_samples(pf_t *pf, struct _rtk_fig_t *fig, int max_samples);

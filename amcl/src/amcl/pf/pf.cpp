@@ -1,34 +1,7 @@
-/*
- *  Player - One Hell of a Robot Server
- *  Copyright (C) 2000  Brian Gerkey   &  Kasper Stoy
- *                      gerkey@usc.edu    kaspers@robotics.usc.edu
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- */
-/**************************************************************************
- * Desc: Simple particle filter for localization.
- * Author: Andrew Howard
- * Date: 10 Dec 2002
- * CVS: $Id: pf.c 6345 2008-04-17 01:36:39Z gerkey $
- *************************************************************************/
-
-#include <assert.h>
-#include <math.h>
-#include <stdlib.h>
-#include <time.h>
+#include <cassert>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
 
 #include "pf.hpp"
 #include "pf_pdf.hpp"
@@ -96,8 +69,8 @@ pf_t *pf_alloc(int min_samples, int max_samples,
     set->cluster_max_count = max_samples;
     set->clusters = (pf_cluster_t*)malloc(set->cluster_max_count * sizeof(pf_cluster_t));
 
-    set->mean = pf_vector_zero();
-    set->cov = pf_matrix_zero();
+    set->mean = Pose(0.0, 0.0, 0.0); //set->mean = pf_vector_zero();
+    set->cov = Covariance(); // pf_matrix_zero();
   }
 
   pf->w_slow = 0.0;
@@ -129,7 +102,7 @@ void pf_free(pf_t *pf)
 }
 
 // Initialize the filter using a guassian
-void pf_init(pf_t *pf, pf_vector_t mean, pf_matrix_t cov)
+void pf_init(pf_t *pf, Pose mean, Covariance cov)
 {
   int i;
   pf_sample_set_t *set;
@@ -507,8 +480,8 @@ void pf_cluster_stats(pf_t *pf, pf_sample_set_t *set)
     cluster = set->clusters + i;
     cluster->count = 0;
     cluster->weight = 0;
-    cluster->mean = pf_vector_zero();
-    cluster->cov = pf_matrix_zero();
+    cluster->mean = Pose(0.0, 0.0, 0.0); // pf_vector_zero();
+    cluster->cov = Covariance(); // pf_matrix_zero();
 
     for (j = 0; j < 4; j++)
       cluster->m[j] = 0.0;
@@ -520,8 +493,8 @@ void pf_cluster_stats(pf_t *pf, pf_sample_set_t *set)
   // Initialize overall filter stats
   count = 0;
   weight = 0.0;
-  set->mean = pf_vector_zero();
-  set->cov = pf_matrix_zero();
+  set->mean = Pose(0.0, 0.0, 0.0); // pf_vector_zero();
+  set->cov = Covariance(); // pf_matrix_zero();
   for (j = 0; j < 4; j++)
     m[j] = 0.0;
   for (j = 0; j < 2; j++)
@@ -580,7 +553,7 @@ void pf_cluster_stats(pf_t *pf, pf_sample_set_t *set)
     cluster->mean.v[1] = cluster->m[1] / cluster->weight;
     cluster->mean.v[2] = atan2(cluster->m[3], cluster->m[2]);
 
-    cluster->cov = pf_matrix_zero();
+    cluster->cov = Covariance();// pf_matrix_zero();
 
     // Covariance in linear components
     for (j = 0; j < 2; j++)
@@ -617,7 +590,7 @@ void pf_cluster_stats(pf_t *pf, pf_sample_set_t *set)
 
 
 // Compute the CEP statistics (mean and variance).
-void pf_get_cep_stats(pf_t *pf, pf_vector_t *mean, double *var)
+void pf_get_cep_stats(pf_t *pf, Pose *mean, double *var)
 {
   int i;
   double mn, mx, my, mrr;
@@ -654,7 +627,7 @@ void pf_get_cep_stats(pf_t *pf, pf_vector_t *mean, double *var)
 
 // Get the statistics for a particular cluster.
 int pf_get_cluster_stats(pf_t *pf, int clabel, double *weight,
-                         pf_vector_t *mean, pf_matrix_t *cov)
+                         Pose *mean, Covariance *cov)
 {
   pf_sample_set_t *set;
   pf_cluster_t *cluster;

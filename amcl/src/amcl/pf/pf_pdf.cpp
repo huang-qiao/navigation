@@ -16,9 +16,9 @@ static unsigned int pf_pdf_seed;
  *************************************************************************/
 
 // Create a gaussian pdf
-pf_pdf_gaussian_t *pf_pdf_gaussian_alloc(pf_vector_t x, pf_matrix_t cx)
+pf_pdf_gaussian_t *pf_pdf_gaussian_alloc(Pose x, Covariance cx)
 {
-  pf_matrix_t cd;
+  Covariance cd;
   pf_pdf_gaussian_t *pdf;
 
   pdf = (pf_pdf_gaussian_t*)malloc(sizeof(pf_pdf_gaussian_t));
@@ -29,7 +29,7 @@ pf_pdf_gaussian_t *pf_pdf_gaussian_alloc(pf_vector_t x, pf_matrix_t cx)
 
   // Decompose the convariance matrix into a rotation
   // matrix and a diagonal matrix.
-  pf_matrix_unitary(&pdf->cr, &cd, pdf->cx);
+  pdf->cx.unitary(pdf->cr, cd); //pf_matrix_unitary(&pdf->cr, &cd, pdf->cx);
   pdf->cd.v[0] = sqrt(cd.m[0][0]);
   pdf->cd.v[1] = sqrt(cd.m[1][1]);
   pdf->cd.v[2] = sqrt(cd.m[2][2]);
@@ -54,10 +54,10 @@ void pf_pdf_gaussian_free(pf_pdf_gaussian_t *pdf)
 
 /*
 // Compute the value of the pdf at some point [x].
-double pf_pdf_gaussian_value(pf_pdf_gaussian_t *pdf, pf_vector_t x)
+double pf_pdf_gaussian_value(pf_pdf_gaussian_t *pdf, Pose x)
 {
   int i, j;
-  pf_vector_t z;
+  Pose z;
   double zz, p;
 
   z = pf_vector_sub(x, pdf->x);
@@ -75,11 +75,11 @@ double pf_pdf_gaussian_value(pf_pdf_gaussian_t *pdf, pf_vector_t x)
 
 
 // Generate a sample from the the pdf.
-pf_vector_t pf_pdf_gaussian_sample(pf_pdf_gaussian_t *pdf)
+Pose pf_pdf_gaussian_sample(pf_pdf_gaussian_t *pdf)
 {
   int i, j;
-  pf_vector_t r;
-  pf_vector_t x;
+  Pose r;
+  Pose x;
 
   // Generate a random vector
   for (i = 0; i < 3; i++)

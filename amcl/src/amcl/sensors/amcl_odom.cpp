@@ -120,7 +120,7 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorDataPtr data)
   pf_sample_set_t *set;
 
   set = pf->sets + pf->current_set;
-  pf_vector_t old_pose = pf_vector_sub(ndata->pose, ndata->delta);
+  Pose old_pose = Pose::Sub(ndata->pose, ndata->delta); //pf_vector_sub(ndata->pose, ndata->delta);
 
   switch( this->model_type )
   {

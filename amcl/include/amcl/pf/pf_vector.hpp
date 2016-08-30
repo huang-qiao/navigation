@@ -1,57 +1,72 @@
 #pragma once
 
-#include <stdio.h>
+#include <cstdio>
 
 // The basic vector
-typedef struct
+struct Pose
 {
   double v[3];
-} pf_vector_t;
+
+  // static functions
+  static Pose Sum(const Pose &a, const Pose &b);
+  static Pose Sub(const Pose &a, const Pose &b);
+  static Pose CoordSum(const Pose &a, const Pose &b);
+  static Pose CoordSub(const Pose &a, const Pose &b);
+
+  Pose(const double &x = 0.0, const double &y = 0.0, const double &a = 0.0);
+  bool isFinite();
+  void dumpToFile(FILE *file, const char *fmt);
+};
 
 
 // The basic matrix
-typedef struct
+struct Covariance
 {
   double m[3][3];
-} pf_matrix_t;
+
+  Covariance();
+  bool isFinite();
+  void dumpToFile(FILE *file, const char *fmt);
+  void unitary(Covariance& r, Covariance& d);
+};
 
 
 // Return a zero vector
-pf_vector_t pf_vector_zero();
+//Pose pf_vector_zero();
 
 // Check for NAN or INF in any component
-int pf_vector_finite(pf_vector_t a);
+//int pf_vector_finite(Pose a);
 
 // Print a vector
-void pf_vector_fprintf(pf_vector_t s, FILE *file, const char *fmt);
+//void pf_vector_fprintf(Pose s, FILE *file, const char *fmt);
 
 // Simple vector addition
-pf_vector_t pf_vector_add(pf_vector_t a, pf_vector_t b);
+//Pose pf_vector_add(Pose a, Pose b);
 
 // Simple vector subtraction
-pf_vector_t pf_vector_sub(pf_vector_t a, pf_vector_t b);
+//Pose pf_vector_sub(Pose a, Pose b);
 
 // Transform from local to global coords (a + b)
-pf_vector_t pf_vector_coord_add(pf_vector_t a, pf_vector_t b);
+//Pose pf_vector_coord_add(Pose a, Pose b);
 
 // Transform from global to local coords (a - b)
-pf_vector_t pf_vector_coord_sub(pf_vector_t a, pf_vector_t b);
+//Pose pf_vector_coord_sub(Pose a, Pose b);
 
 
 // Return a zero matrix
-pf_matrix_t pf_matrix_zero();
+//Covariance pf_matrix_zero();
 
 // Check for NAN or INF in any component
-int pf_matrix_finite(pf_matrix_t a);
+//int pf_matrix_finite(Covariance a);
 
 // Print a matrix
-void pf_matrix_fprintf(pf_matrix_t s, FILE *file, const char *fmt);
+//void pf_matrix_fprintf(Covariance s, FILE *file, const char *fmt);
 
 // Compute the matrix inverse.  Will also return the determinant,
 // which should be checked for underflow (indicated singular matrix).
-//pf_matrix_t pf_matrix_inverse(pf_matrix_t a, double *det);
+//Covariance pf_matrix_inverse(Covariance a, double *det);
 
 // Decompose a covariance matrix [a] into a rotation matrix [r] and a
 // diagonal matrix [d] such that a = r * d * r^T.
-void pf_matrix_unitary(pf_matrix_t *r, pf_matrix_t *d, pf_matrix_t a);
+//void pf_matrix_unitary(Covariance *r, Covariance *d, Covariance a);
 

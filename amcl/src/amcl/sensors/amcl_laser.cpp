@@ -184,7 +184,7 @@ double AMCLLaser::BeamModel(AMCLLaserDataPtr data, pf_sample_set_t* set)
   double obs_range, obs_bearing;
   double total_weight;
   pf_sample_t *sample;
-  pf_vector_t pose;
+  Pose pose;
 
   //self = (AMCLLaser*) data->sensor;
   AMCLLaserPtr self = std::dynamic_pointer_cast<AMCLLaser>(data->sensor);
@@ -198,7 +198,7 @@ double AMCLLaser::BeamModel(AMCLLaserDataPtr data, pf_sample_set_t* set)
     pose = sample->pose;
 
     // Take account of the laser pose relative to the robot
-    pose = pf_vector_coord_add(self->laser_pose, pose);
+    pose = Pose::CoordSum(self->laser_pose, pose); //pf_vector_coord_add(self->laser_pose, pose);
 
     p = 1.0;
 
@@ -256,8 +256,8 @@ double AMCLLaser::LikelihoodFieldModel(AMCLLaserDataPtr data, pf_sample_set_t* s
   double obs_range, obs_bearing;
   double total_weight;
   pf_sample_t *sample;
-  pf_vector_t pose;
-  pf_vector_t hit;
+  Pose pose;
+  Pose hit;
 
   //self = (AMCLLaser*) data->sensor;
   AMCLLaserPtr self = std::dynamic_pointer_cast<AMCLLaser>(data->sensor);
@@ -271,7 +271,7 @@ double AMCLLaser::LikelihoodFieldModel(AMCLLaserDataPtr data, pf_sample_set_t* s
     pose = sample->pose;
 
     // Take account of the laser pose relative to the robot
-    pose = pf_vector_coord_add(self->laser_pose, pose);
+    pose = Pose::CoordSum(self->laser_pose, pose); // pf_vector_coord_add(self->laser_pose, pose);
 
     p = 1.0;
 
@@ -347,8 +347,8 @@ double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserDataPtr data, pf_sample_set_
   double obs_range, obs_bearing;
   double total_weight;
   pf_sample_t *sample;
-  pf_vector_t pose;
-  pf_vector_t hit;
+  Pose pose;
+  Pose hit;
 
   //self = (AMCLLaser*) data->sensor;
   AMCLLaserPtr self = std::dynamic_pointer_cast<AMCLLaser>(data->sensor);
@@ -413,7 +413,7 @@ double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserDataPtr data, pf_sample_set_
     pose = sample->pose;
 
     // Take account of the laser pose relative to the robot
-    pose = pf_vector_coord_add(self->laser_pose, pose);
+    pose = Pose::CoordSum(self->laser_pose, pose); // pf_vector_coord_add(self->laser_pose, pose);
 
     log_p = 0;
 

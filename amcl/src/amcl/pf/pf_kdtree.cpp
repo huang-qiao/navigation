@@ -82,7 +82,7 @@ void pf_kdtree_clear(pf_kdtree_t *self)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Insert a pose into the tree.
-void pf_kdtree_insert(pf_kdtree_t *self, pf_vector_t pose, double value)
+void pf_kdtree_insert(pf_kdtree_t *self, Pose pose, double value)
 {
   int key[3];
 
@@ -120,7 +120,7 @@ void pf_kdtree_insert(pf_kdtree_t *self, pf_vector_t pose, double value)
 ////////////////////////////////////////////////////////////////////////////////
 // Determine the probability estimate for the given pose. TODO: this
 // should do a kernel density estimate rather than a simple histogram.
-double pf_kdtree_get_prob(pf_kdtree_t *self, pf_vector_t pose)
+double pf_kdtree_get_prob(pf_kdtree_t *self, Pose pose)
 {
   int key[3];
   pf_kdtree_node_t *node;
@@ -138,7 +138,7 @@ double pf_kdtree_get_prob(pf_kdtree_t *self, pf_vector_t pose)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Determine the cluster label for the given pose
-int pf_kdtree_get_cluster(pf_kdtree_t *self, pf_vector_t pose)
+int pf_kdtree_get_cluster(pf_kdtree_t *self, Pose pose)
 {
   int key[3];
   pf_kdtree_node_t *node;

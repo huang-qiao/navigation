@@ -68,7 +68,7 @@ public:
   //virtual bool UpdateSensor(pf_t *pf, AMCLLaserDataPtr data);
 
   // Set the laser's pose after construction
-  void SetLaserPose(pf_vector_t& laser_pose)
+  void SetLaserPose(Pose& laser_pose)
           {this->laser_pose = laser_pose;}
 
 private:
@@ -94,7 +94,7 @@ private:
   MapPtr map;
 
   // Laser offset relative to robot
-  pf_vector_t laser_pose;
+  Pose laser_pose;
 
   // Max beams to consider
   int max_beams;
