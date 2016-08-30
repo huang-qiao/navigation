@@ -202,11 +202,11 @@ double AMCLLaser::BeamModel(AMCLLaserDataPtr data, pf_sample_set_t* set)
 
     p = 1.0;
 
-    step = (data->range_count - 1) / (self->max_beams - 1);
-    for (i = 0; i < data->range_count; i += step)
+    step = (data->ranges.size() - 1) / (self->max_beams - 1); //step = (data->range_count - 1) / (self->max_beams - 1);
+    for (i=0; i < data->ranges.size(); i+= step) // for (i = 0; i < data->range_count; i += step)
     {
-      obs_range = data->ranges[i][0];
-      obs_bearing = data->ranges[i][1];
+      obs_range = data->ranges[i]; //obs_range = data->ranges[i][0];
+      obs_bearing = data->angle_min + i * data->angle_increment; //obs_bearing = data->ranges[i][1];
 
       // Compute the range according to the map
       map_range = self->map->calcRange(pose.v[0], pose.v[1],
@@ -279,16 +279,16 @@ double AMCLLaser::LikelihoodFieldModel(AMCLLaserDataPtr data, pf_sample_set_t* s
     double z_hit_denom = 2 * self->sigma_hit * self->sigma_hit;
     double z_rand_mult = 1.0/data->range_max;
 
-    step = (data->range_count - 1) / (self->max_beams - 1);
+    step = (data->ranges.size() - 1) / (self->max_beams - 1); //step = (data->range_count - 1) / (self->max_beams - 1);
 
     // Step size must be at least 1
     if(step < 1)
       step = 1;
 
-    for (i = 0; i < data->range_count; i += step)
+    for (i = 0; i < data->ranges.size(); i += step) //for (i = 0; i < data->range_count; i += step)
     {
-      obs_range = data->ranges[i][0];
-      obs_bearing = data->ranges[i][1];
+      obs_range = data->ranges[i]; //obs_range = data->ranges[i][0];
+      obs_bearing = data->angle_min + i * data->angle_increment; //obs_bearing = data->ranges[i][1];
 
       // This model ignores max range readings
       if(obs_range >= data->range_max)
@@ -355,7 +355,7 @@ double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserDataPtr data, pf_sample_set_
 
   total_weight = 0.0;
 
-  step = ceil((data->range_count) / static_cast<double>(self->max_beams));
+  step = ceil((data->ranges.size()) / static_cast<double>(self->max_beams)); // step = ceil((data->range_count) / static_cast<double>(self->max_beams));
 
   // Step size must be at least 1
   if(step < 1)
@@ -419,10 +419,11 @@ double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserDataPtr data, pf_sample_set_
 
     beam_ind = 0;
 
-    for (i = 0; i < data->range_count; i += step, beam_ind++)
+    for (i=0; i<data->ranges.size(); i+= step) // for (i = 0; i < data->range_count; i += step, beam_ind++)
     {
-      obs_range = data->ranges[i][0];
-      obs_bearing = data->ranges[i][1];
+      obs_range = data->ranges[i]; //obs_range = data->ranges[i][0];
+      obs_bearing = data->angle_min + i * data->angle_increment; //obs_bearing = data->ranges[i][1];
+
 
       // This model ignores max range readings
       if(obs_range >= data->range_max){

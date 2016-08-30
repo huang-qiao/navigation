@@ -1201,7 +1201,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     //ldata.sensor = lasers_[laser_index];TRACE_FUNC
     //ldata.range_count = laser_scan->ranges.size();TRACE_FUNC
     ldata_ptr->sensor = lasers_[laser_index];TRACE_FUNC
-    ldata_ptr->range_count = laser_scan->ranges.size();TRACE_FUNC
+    ldata_ptr->ranges.resize(laser_scan->ranges.size()); // ldata_ptr->range_count = laser_scan->ranges.size();TRACE_FUNC
 
     // To account for lasers that are mounted upside-down, we determine the
     // min, max, and increment angles of the laser in the base frame.
@@ -1252,25 +1252,29 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     TRACE_FUNC
     // The AMCLLaserData destructor will free this memory
     //ldata.ranges = new double[ldata.range_count][2];
-    ldata_ptr->ranges = new double[ldata_ptr->range_count][2];
+    //ldata_ptr->ranges = new double[ldata_ptr->range_count][2];
     //ROS_ASSERT(ldata.ranges);
-    ROS_ASSERT(ldata_ptr->ranges);
+    ROS_ASSERT(!ldata_ptr->ranges.empty());
     //for(int i=0;i<ldata.range_count;i++)
-    for (int i=0; i<ldata_ptr->range_count; i++)
+    for (int i=0; i<ldata_ptr->ranges.size(); i++)// for (int i=0; i<ldata_ptr->range_count; i++)
     {
       // amcl doesn't (yet) have a concept of min range.  So we'll map short
       // readings to max range.
       if(laser_scan->ranges[i] <= range_min) {
         //ldata.ranges[i][0] = ldata.range_max;
-        ldata_ptr->ranges[i][0] = ldata_ptr->range_max;
+        ldata_ptr->ranges[i] = ldata_ptr->range_max; //ldata_ptr->ranges[i][0] = ldata_ptr->range_max;
       } else {
         //ldata.ranges[i][0] = laser_scan->ranges[i];
-        ldata_ptr->ranges[i][0] = laser_scan->ranges[i];
+        ldata_ptr->ranges[i] = laser_scan->ranges[i]; //ldata_ptr->ranges[i][0] = laser_scan->ranges[i];
       }
       // Compute bearing
       //ldata.ranges[i][1] = angle_min + (i * angle_increment);
-      ldata_ptr->ranges[i][1] = angle_min + (i * angle_increment);
+      //ldata_ptr->ranges[i][1] = angle_min + (i * angle_increment);
     }
+    // Compute bearing
+    ldata_ptr->angle_min = angle_min;
+    ldata_ptr->angle_max = angle_min + (ldata_ptr->ranges.size()-1) * angle_increment;
+    ldata_ptr->angle_increment = angle_increment;
 TRACE_FUNC
     //lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
     //lasers_[laser_index]->UpdateSensor(pf_, &ldata);

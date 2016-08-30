@@ -14,17 +14,18 @@ typedef enum
 } laser_model_t;
 
 
-
 // Laser sensor data
 struct AMCLLaserData : public AMCLSensorData
 {
-  AMCLLaserData () {ranges=NULL;};
-  virtual ~AMCLLaserData() {delete [] ranges;};
+  //AMCLLaserData () {ranges=NULL;};
+  //virtual ~AMCLLaserData() {delete [] ranges;};
 
   // Laser range data (range, bearing tuples)
-  int range_count;
-  double range_max;
-  double (*ranges)[2];
+  //int range_count;
+  double angle_min, angle_max, angle_increment;
+  double range_min, range_max;
+  //double (*ranges)[2];
+  std::vector<double> ranges;
 };
 
 using AMCLLaserDataPtr = std::shared_ptr<AMCLLaserData>;
