@@ -16,12 +16,12 @@ static unsigned int pf_pdf_seed;
  *************************************************************************/
 
 // Create a gaussian pdf
-pf_pdf_gaussian_t *pf_pdf_gaussian_alloc(Pose x, Covariance cx)
+PdfGaussianPtr PdfGaussian::CreatePdf(const Pose &x, const Covariance &cx)
 {
   Covariance cd;
-  pf_pdf_gaussian_t *pdf;
+  //PdfGaussianPtr pdf;
 
-  pdf = (pf_pdf_gaussian_t*)malloc(sizeof(pf_pdf_gaussian_t));
+  PdfGaussianPtr pdf = std::make_shared<PdfGaussian>(); //pdf = (PdfGaussian*)malloc(sizeof(PdfGaussian));
 
   pdf->x = x;
   pdf->cx = cx;
@@ -43,14 +43,14 @@ pf_pdf_gaussian_t *pf_pdf_gaussian_alloc(Pose x, Covariance cx)
 }
 
 
-// Destroy the pdf
-void pf_pdf_gaussian_free(pf_pdf_gaussian_t *pdf)
+/* Destroy the pdf
+void pf_pdf_gaussian_free(PdfGaussianPtr pdf)
 {
   //gsl_rng_free(pdf->rng);
   free(pdf);
   return;
 }
-
+*/
 
 /*
 // Compute the value of the pdf at some point [x].
@@ -75,7 +75,7 @@ double pf_pdf_gaussian_value(pf_pdf_gaussian_t *pdf, Pose x)
 
 
 // Generate a sample from the the pdf.
-Pose pf_pdf_gaussian_sample(pf_pdf_gaussian_t *pdf)
+Pose PdfGaussian::sample()
 {
   int i, j;
   Pose r;
@@ -85,14 +85,14 @@ Pose pf_pdf_gaussian_sample(pf_pdf_gaussian_t *pdf)
   for (i = 0; i < 3; i++)
   {
     //r.v[i] = gsl_ran_gaussian(pdf->rng, pdf->cd.v[i]);
-    r.v[i] = pf_ran_gaussian(pdf->cd.v[i]);
+    r.v[i] = RandomGaussian(this->cd.v[i]);
   }
 
   for (i = 0; i < 3; i++)
   {
-    x.v[i] = pdf->x.v[i];
+    x.v[i] = this->x.v[i];
     for (j = 0; j < 3; j++)
-      x.v[i] += pdf->cr.m[i][j] * r.v[j];
+      x.v[i] += this->cr.m[i][j] * r.v[j];
   }
 
   return x;
@@ -102,7 +102,7 @@ Pose pf_pdf_gaussian_sample(pf_pdf_gaussian_t *pdf)
 // deviation sigma.
 // We use the polar form of the Box-Muller transformation, explained here:
 //   http://www.taygeta.com/random/gaussian.html
-double pf_ran_gaussian(double sigma)
+double RandomGaussian(double sigma)
 {
   double x1, x2, w, r;
 

@@ -2,12 +2,14 @@
 
 #include "pf_vector.hpp"
 
+#include <memory>
+
 /**************************************************************************
  * Gaussian
  *************************************************************************/
 
 // Gaussian PDF info
-typedef struct
+struct PdfGaussian
 {
   // Mean, covariance and inverse covariance
   Pose x;
@@ -22,14 +24,19 @@ typedef struct
   // A random number generator
   //gsl_rng *rng;
 
-} pf_pdf_gaussian_t;
+  // Generate a sample from the the pdf.
+  Pose sample();
 
+  // Create a gaussian pdf
+  static std::shared_ptr<PdfGaussian> CreatePdf(const Pose &x, const Covariance &cx);
+};
 
-// Create a gaussian pdf
-pf_pdf_gaussian_t *pf_pdf_gaussian_alloc(Pose x, Covariance cx);
+using PdfGaussianPtr = std::shared_ptr<PdfGaussian>;
+
+//PdfGaussianPtr PdfGaussian::CreatePdf(Pose x, Covariance cx);
 
 // Destroy the pdf
-void pf_pdf_gaussian_free(pf_pdf_gaussian_t *pdf);
+//void pf_pdf_gaussian_free(PdfGaussianPtr pdf);
 
 // Compute the value of the pdf at some point [z].
 //double pf_pdf_gaussian_value(pf_pdf_gaussian_t *pdf, pf_vector_t z);
@@ -38,10 +45,10 @@ void pf_pdf_gaussian_free(pf_pdf_gaussian_t *pdf);
 // deviation sigma.
 // We use the polar form of the Box-Muller transformation, explained here:
 //   http://www.taygeta.com/random/gaussian.html
-double pf_ran_gaussian(double sigma);
+double RandomGaussian(double sigma);
 
 // Generate a sample from the the pdf.
-Pose pf_pdf_gaussian_sample(pf_pdf_gaussian_t *pdf);
+//Pose PdfGaussian::sample(PdfGaussianPtr pdf);
 
 
 #if 0

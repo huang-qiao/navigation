@@ -107,7 +107,7 @@ void pf_init(pf_t *pf, Pose mean, Covariance cov)
   int i;
   pf_sample_set_t *set;
   pf_sample_t *sample;
-  pf_pdf_gaussian_t *pdf;
+  PdfGaussianPtr pdf;
 
   set = pf->sets + pf->current_set;
 
@@ -116,14 +116,14 @@ void pf_init(pf_t *pf, Pose mean, Covariance cov)
 
   set->sample_count = pf->max_samples;
 
-  pdf = pf_pdf_gaussian_alloc(mean, cov);
+  pdf = PdfGaussian::CreatePdf(mean, cov);
 
   // Compute the new sample poses
   for (i = 0; i < set->sample_count; i++)
   {
     sample = set->samples + i;
     sample->weight = 1.0 / pf->max_samples;
-    sample->pose = pf_pdf_gaussian_sample(pdf);
+    sample->pose = pdf->sample(); // sample->pose = PdfGaussian::sample(pdf);
 
     // Add sample to histogram
     pf_kdtree_insert(set->kdtree, sample->pose, sample->weight);
@@ -131,7 +131,7 @@ void pf_init(pf_t *pf, Pose mean, Covariance cov)
 
   pf->w_slow = pf->w_fast = 0.0;
 
-  pf_pdf_gaussian_free(pdf);
+  pdf.reset(); //pf_pdf_gaussian_free(pdf);
 
   // Re-compute cluster statistics
   pf_cluster_stats(pf, set);

@@ -151,9 +151,9 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorDataPtr data)
       double sn_bearing = sin(delta_bearing);
 
       // Sample pose differences
-      delta_trans_hat = delta_trans + pf_ran_gaussian(trans_hat_stddev);
-      delta_rot_hat = delta_rot + pf_ran_gaussian(rot_hat_stddev);
-      delta_strafe_hat = 0 + pf_ran_gaussian(strafe_hat_stddev);
+      delta_trans_hat = delta_trans + RandomGaussian(trans_hat_stddev);
+      delta_rot_hat = delta_rot + RandomGaussian(rot_hat_stddev);
+      delta_strafe_hat = 0 + RandomGaussian(strafe_hat_stddev);
       // Apply sampled update to particle pose
       sample->pose.v[0] += (delta_trans_hat * cs_bearing +
                             delta_strafe_hat * sn_bearing);
@@ -196,14 +196,14 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorDataPtr data)
 
       // Sample pose differences
       delta_rot1_hat = angle_diff(delta_rot1,
-                                  pf_ran_gaussian(this->alpha1*delta_rot1_noise*delta_rot1_noise +
+                                  RandomGaussian(this->alpha1*delta_rot1_noise*delta_rot1_noise +
                                                   this->alpha2*delta_trans*delta_trans));
       delta_trans_hat = delta_trans -
-              pf_ran_gaussian(this->alpha3*delta_trans*delta_trans +
+              RandomGaussian(this->alpha3*delta_trans*delta_trans +
                               this->alpha4*delta_rot1_noise*delta_rot1_noise +
                               this->alpha4*delta_rot2_noise*delta_rot2_noise);
       delta_rot2_hat = angle_diff(delta_rot2,
-                                  pf_ran_gaussian(this->alpha1*delta_rot2_noise*delta_rot2_noise +
+                                  RandomGaussian(this->alpha1*delta_rot2_noise*delta_rot2_noise +
                                                   this->alpha2*delta_trans*delta_trans));
 
       // Apply sampled update to particle pose
@@ -242,9 +242,9 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorDataPtr data)
       double sn_bearing = sin(delta_bearing);
 
       // Sample pose differences
-      delta_trans_hat = delta_trans + pf_ran_gaussian(trans_hat_stddev);
-      delta_rot_hat = delta_rot + pf_ran_gaussian(rot_hat_stddev);
-      delta_strafe_hat = 0 + pf_ran_gaussian(strafe_hat_stddev);
+      delta_trans_hat = delta_trans + RandomGaussian(trans_hat_stddev);
+      delta_rot_hat = delta_rot + RandomGaussian(rot_hat_stddev);
+      delta_strafe_hat = 0 + RandomGaussian(strafe_hat_stddev);
       // Apply sampled update to particle pose
       sample->pose.v[0] += (delta_trans_hat * cs_bearing +
                             delta_strafe_hat * sn_bearing);
@@ -287,14 +287,14 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorDataPtr data)
 
       // Sample pose differences
       delta_rot1_hat = angle_diff(delta_rot1,
-                                  pf_ran_gaussian(sqrt(this->alpha1*delta_rot1_noise*delta_rot1_noise +
+                                  RandomGaussian(sqrt(this->alpha1*delta_rot1_noise*delta_rot1_noise +
                                                        this->alpha2*delta_trans*delta_trans)));
       delta_trans_hat = delta_trans -
-              pf_ran_gaussian(sqrt(this->alpha3*delta_trans*delta_trans +
+              RandomGaussian(sqrt(this->alpha3*delta_trans*delta_trans +
                                    this->alpha4*delta_rot1_noise*delta_rot1_noise +
                                    this->alpha4*delta_rot2_noise*delta_rot2_noise));
       delta_rot2_hat = angle_diff(delta_rot2,
-                                  pf_ran_gaussian(sqrt(this->alpha1*delta_rot2_noise*delta_rot2_noise +
+                                  RandomGaussian(sqrt(this->alpha1*delta_rot2_noise*delta_rot2_noise +
                                                        this->alpha2*delta_trans*delta_trans)));
 
       // Apply sampled update to particle pose
