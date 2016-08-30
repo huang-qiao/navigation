@@ -6,13 +6,13 @@
 namespace amcl
 {
 
-typedef enum
+enum class OdomModel
 {
-  ODOM_MODEL_DIFF,
-  ODOM_MODEL_OMNI,
-  ODOM_MODEL_DIFF_CORRECTED,
-  ODOM_MODEL_OMNI_CORRECTED
-} odom_model_t;
+  DIFF,
+  OMNI,
+  DIFF_CORRECTED,
+  OMNI_CORRECTED
+};
 
 // Odometric sensor data
 struct AMCLOdomData : public AMCLSensorData
@@ -44,7 +44,7 @@ public:
                             double alpha4,
                             double alpha5);
 
-  void SetModel( odom_model_t type,
+  void SetModel( OdomModel type,
                          double alpha1,
                          double alpha2,
                          double alpha3,
@@ -60,7 +60,7 @@ private:
   double time;
 
   // Model type
-  odom_model_t model_type;
+  OdomModel model_type;
 
   // Drift parameters
   double alpha1, alpha2, alpha3, alpha4, alpha5;

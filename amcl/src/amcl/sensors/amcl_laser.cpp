@@ -88,7 +88,7 @@ AMCLLaser::SetModelBeam(double z_hit,
                         double lambda_short,
                         double chi_outlier)
 {
-  this->model_type = LASER_MODEL_BEAM;
+  this->model_type = LaserModel::BEAM;
   this->z_hit = z_hit;
   this->z_short = z_short;
   this->z_max = z_max;
@@ -104,7 +104,7 @@ AMCLLaser::SetModelLikelihoodField(double z_hit,
                                    double sigma_hit,
                                    double max_occ_dist)
 {
-  this->model_type = LASER_MODEL_LIKELIHOOD_FIELD;
+  this->model_type = LaserModel::LIKELIHOOD_FIELD;
   this->z_hit = z_hit;
   this->z_rand = z_rand;
   this->sigma_hit = sigma_hit;
@@ -122,7 +122,7 @@ AMCLLaser::SetModelLikelihoodFieldProb(double z_hit,
 				       double beam_skip_threshold,
 				       double beam_skip_error_threshold)
 {
-  this->model_type = LASER_MODEL_LIKELIHOOD_FIELD_PROB;
+  this->model_type = LaserModel::LIKELIHOOD_FIELD_PROB;
   this->z_hit = z_hit;
   this->z_rand = z_rand;
   this->sigma_hit = sigma_hit;
@@ -148,15 +148,15 @@ bool AMCLLaser::UpdateSensor(pf_t *pf, AMCLSensorDataPtr data)
   double total_weight;
 
   // Apply the laser sensor model
-  if(this->model_type == LASER_MODEL_BEAM) {
+  if(this->model_type == LaserModel::BEAM) {
     //pf_update_sensor(pf, (pf_sensor_model_fn_t) BeamModel, data);
     //total_weight = BeamModel((AMCLLaserData*)data, set);
       total_weight = BeamModel(std::dynamic_pointer_cast<AMCLLaserData>(data), set);
-  } else if(this->model_type == LASER_MODEL_LIKELIHOOD_FIELD) {
+  } else if(this->model_type == LaserModel::LIKELIHOOD_FIELD) {
     //pf_update_sensor(pf, (pf_sensor_model_fn_t) LikelihoodFieldModel, data);
     //total_weight = LikelihoodFieldModel((AMCLLaserData*)data, set);
     total_weight = LikelihoodFieldModel(std::dynamic_pointer_cast<AMCLLaserData>(data), set);
-  } else if(this->model_type == LASER_MODEL_LIKELIHOOD_FIELD_PROB) {
+  } else if(this->model_type == LaserModel::LIKELIHOOD_FIELD_PROB) {
     //pf_update_sensor(pf, (pf_sensor_model_fn_t) LikelihoodFieldModelProb, data);
     //total_weight = LikelihoodFieldModelProb((AMCLLaserData*)data, set);
     total_weight = LikelihoodFieldModelProb(std::dynamic_pointer_cast<AMCLLaserData>(data), set);

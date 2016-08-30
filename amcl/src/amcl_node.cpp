@@ -207,7 +207,7 @@ class AmclNode
     //Nomotion update control
     bool m_force_update;  // used to temporarily let amcl update samples even when no motion occurs...
 
-    AMCLOdom* odom_;
+    AMCLOdomPtr odom_; //AMCLOdom* odom_;
     AMCLLaserPtr laser_; //AMCLLaser* laser_;
 
     ros::Duration cloud_pub_interval;
@@ -254,10 +254,10 @@ class AmclNode
     bool do_beamskip_;
     double beam_skip_distance_, beam_skip_threshold_, beam_skip_error_threshold_;
     double laser_likelihood_max_dist_;
-    odom_model_t odom_model_type_;
+    OdomModel odom_model_type_;
     double init_pose_[3];
     double init_cov_[3];
-    laser_model_t laser_model_type_;
+    LaserModel laser_model_;
     bool tf_broadcast_;
 
     void reconfigureCB(amcl::AMCLConfig &config, uint32_t level);
@@ -364,33 +364,33 @@ AmclNode::AmclNode() :
   std::string tmp_model_type;
   private_nh_.param("laser_model_type", tmp_model_type, std::string("likelihood_field"));
   if(tmp_model_type == "beam")
-    laser_model_type_ = LASER_MODEL_BEAM;
+    laser_model_ = LaserModel::BEAM;
   else if(tmp_model_type == "likelihood_field")
-    laser_model_type_ = LASER_MODEL_LIKELIHOOD_FIELD;
+    laser_model_ = LaserModel::LIKELIHOOD_FIELD;
   else if(tmp_model_type == "likelihood_field_prob"){
-    laser_model_type_ = LASER_MODEL_LIKELIHOOD_FIELD_PROB;
+    laser_model_ = LaserModel::LIKELIHOOD_FIELD_PROB;
   }
   else
   {
     ROS_WARN("Unknown laser model type \"%s\"; defaulting to likelihood_field model",
              tmp_model_type.c_str());
-    laser_model_type_ = LASER_MODEL_LIKELIHOOD_FIELD;
+    laser_model_ = LaserModel::LIKELIHOOD_FIELD;
   }
 
   private_nh_.param("odom_model_type", tmp_model_type, std::string("diff"));
   if(tmp_model_type == "diff")
-    odom_model_type_ = ODOM_MODEL_DIFF;
+    odom_model_type_ = OdomModel::DIFF;
   else if(tmp_model_type == "omni")
-    odom_model_type_ = ODOM_MODEL_OMNI;
+    odom_model_type_ = OdomModel::OMNI;
   else if(tmp_model_type == "diff-corrected")
-    odom_model_type_ = ODOM_MODEL_DIFF_CORRECTED;
+    odom_model_type_ = OdomModel::DIFF_CORRECTED;
   else if(tmp_model_type == "omni-corrected")
-    odom_model_type_ = ODOM_MODEL_OMNI_CORRECTED;
+    odom_model_type_ = OdomModel::OMNI_CORRECTED;
   else
   {
     ROS_WARN("Unknown odom model type \"%s\"; defaulting to diff model",
              tmp_model_type.c_str());
-    odom_model_type_ = ODOM_MODEL_DIFF;
+    odom_model_type_ = OdomModel::DIFF;
   }
 
   private_nh_.param("update_min_d", d_thresh_, 0.2);
@@ -505,20 +505,20 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   laser_likelihood_max_dist_ = config.laser_likelihood_max_dist;
 
   if(config.laser_model_type == "beam")
-    laser_model_type_ = LASER_MODEL_BEAM;
+    laser_model_ = LaserModel::BEAM;
   else if(config.laser_model_type == "likelihood_field")
-    laser_model_type_ = LASER_MODEL_LIKELIHOOD_FIELD;
+    laser_model_ = LaserModel::LIKELIHOOD_FIELD;
   else if(config.laser_model_type == "likelihood_field_prob")
-    laser_model_type_ = LASER_MODEL_LIKELIHOOD_FIELD_PROB;
+    laser_model_ = LaserModel::LIKELIHOOD_FIELD_PROB;
 
   if(config.odom_model_type == "diff")
-    odom_model_type_ = ODOM_MODEL_DIFF;
+    odom_model_type_ = OdomModel::DIFF;
   else if(config.odom_model_type == "omni")
-    odom_model_type_ = ODOM_MODEL_OMNI;
+    odom_model_type_ = OdomModel::OMNI;
   else if(config.odom_model_type == "diff-corrected")
-    odom_model_type_ = ODOM_MODEL_DIFF_CORRECTED;
+    odom_model_type_ = OdomModel::DIFF_CORRECTED;
   else if(config.odom_model_type == "omni-corrected")
-    odom_model_type_ = ODOM_MODEL_OMNI_CORRECTED;
+    odom_model_type_ = OdomModel::OMNI_CORRECTED;
 
   if(config.min_particles > config.max_particles)
   {
@@ -559,18 +559,18 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
 
   // Instantiate the sensor objects
   // Odometry
-  delete odom_;
-  odom_ = new AMCLOdom();
+  odom_.reset(); // delete odom_;
+  odom_ = std::make_shared<AMCLOdom>(); // odom_ = new AMCLOdom();
   ROS_ASSERT(odom_);
   odom_->SetModel( odom_model_type_, alpha1_, alpha2_, alpha3_, alpha4_, alpha5_ );
   // Laser
   laser_.reset(); //delete laser_;
   laser_ = std::make_shared<AMCLLaser>(max_beams_, map_); //laser_ = new AMCLLaser(max_beams_, map_);
   ROS_ASSERT(laser_);
-  if(laser_model_type_ == LASER_MODEL_BEAM)
+  if(laser_model_ == LaserModel::BEAM)
     laser_->SetModelBeam(z_hit_, z_short_, z_max_, z_rand_,
                          sigma_hit_, lambda_short_, 0.0);
-  else if(laser_model_type_ == LASER_MODEL_LIKELIHOOD_FIELD_PROB){
+  else if(laser_model_ == LaserModel::LIKELIHOOD_FIELD_PROB){
     ROS_INFO("Initializing likelihood field model; this can take some time on large maps...");
     laser_->SetModelLikelihoodFieldProb(z_hit_, z_rand_, sigma_hit_,
                                         laser_likelihood_max_dist_,
@@ -578,7 +578,7 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
                                         beam_skip_threshold_, beam_skip_error_threshold_);
     ROS_INFO("Done initializing likelihood field model with probabilities.");
   }
-  else if(laser_model_type_ == LASER_MODEL_LIKELIHOOD_FIELD){
+  else if(laser_model_ == LaserModel::LIKELIHOOD_FIELD){
     ROS_INFO("Initializing likelihood field model; this can take some time on large maps...");
     laser_->SetModelLikelihoodField(z_hit_, z_rand_, sigma_hit_,
                                     laser_likelihood_max_dist_);
@@ -857,18 +857,18 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
 
   // Instantiate the sensor objects
   // Odometry
-  delete odom_;
-  odom_ = new AMCLOdom();
+  odom_.reset(); //delete odom_;
+  odom_ = std::make_shared<AMCLOdom>(); //odom_ = new AMCLOdom();
   ROS_ASSERT(odom_);
   odom_->SetModel( odom_model_type_, alpha1_, alpha2_, alpha3_, alpha4_, alpha5_ );
   // Laser
   laser_.reset(); // delete laser_;
   laser_ = std::make_shared<AMCLLaser>(max_beams_, map_); // laser_ = new AMCLLaser(max_beams_, map_);
   ROS_ASSERT(laser_);
-  if(laser_model_type_ == LASER_MODEL_BEAM)
+  if(laser_model_ == LaserModel::BEAM)
     laser_->SetModelBeam(z_hit_, z_short_, z_max_, z_rand_,
                          sigma_hit_, lambda_short_, 0.0);
-  else if(laser_model_type_ == LASER_MODEL_LIKELIHOOD_FIELD_PROB){
+  else if(laser_model_ == LaserModel::LIKELIHOOD_FIELD_PROB){
     ROS_INFO("Initializing likelihood field model; this can take some time on large maps...");
     laser_->SetModelLikelihoodFieldProb(z_hit_, z_rand_, sigma_hit_,
                                         laser_likelihood_max_dist_,
@@ -902,8 +902,8 @@ AmclNode::freeMapDependentMemory()
     pf_free( pf_ );
     pf_ = NULL;
   }
-  delete odom_;
-  odom_ = NULL;
+  odom_.reset(); // delete odom_;
+  //odom_ = NULL;
   laser_.reset(); // delete laser_;
   //laser_ = NULL;
   TRACE_FUNC_EXIT

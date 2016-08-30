@@ -70,7 +70,7 @@ AMCLOdom::SetModelDiff(double alpha1,
                        double alpha3,
                        double alpha4)
 {
-  this->model_type = ODOM_MODEL_DIFF;
+  this->model_type = OdomModel::DIFF;
   this->alpha1 = alpha1;
   this->alpha2 = alpha2;
   this->alpha3 = alpha3;
@@ -84,7 +84,7 @@ AMCLOdom::SetModelOmni(double alpha1,
                        double alpha4,
                        double alpha5)
 {
-  this->model_type = ODOM_MODEL_OMNI;
+  this->model_type = OdomModel::OMNI;
   this->alpha1 = alpha1;
   this->alpha2 = alpha2;
   this->alpha3 = alpha3;
@@ -93,7 +93,7 @@ AMCLOdom::SetModelOmni(double alpha1,
 }
 
 void
-AMCLOdom::SetModel( odom_model_t type,
+AMCLOdom::SetModel( OdomModel type,
                     double alpha1,
                     double alpha2,
                     double alpha3,
@@ -124,7 +124,7 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorDataPtr data)
 
   switch( this->model_type )
   {
-  case ODOM_MODEL_OMNI:
+  case OdomModel::OMNI:
   {
     double delta_trans, delta_rot, delta_bearing;
     double delta_trans_hat, delta_rot_hat, delta_strafe_hat;
@@ -163,7 +163,7 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorDataPtr data)
     }
   }
   break;
-  case ODOM_MODEL_DIFF:
+  case OdomModel::DIFF:
   {
     // Implement sample_motion_odometry (Prob Rob p 136)
     double delta_rot1, delta_trans, delta_rot2;
@@ -215,7 +215,7 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorDataPtr data)
     }
   }
   break;
-  case ODOM_MODEL_OMNI_CORRECTED:
+  case OdomModel::OMNI_CORRECTED:
   {
     double delta_trans, delta_rot, delta_bearing;
     double delta_trans_hat, delta_rot_hat, delta_strafe_hat;
@@ -254,7 +254,7 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorDataPtr data)
     }
   }
   break;
-  case ODOM_MODEL_DIFF_CORRECTED:
+  case OdomModel::DIFF_CORRECTED:
   {
     // Implement sample_motion_odometry (Prob Rob p 136)
     double delta_rot1, delta_trans, delta_rot2;

@@ -6,12 +6,12 @@
 namespace amcl
 {
 
-typedef enum
+enum class LaserModel
 {
-  LASER_MODEL_BEAM,
-  LASER_MODEL_LIKELIHOOD_FIELD,
-  LASER_MODEL_LIKELIHOOD_FIELD_PROB
-} laser_model_t;
+  BEAM,
+  LIKELIHOOD_FIELD,
+  LIKELIHOOD_FIELD_PROB
+};
 
 
 // Laser sensor data
@@ -85,7 +85,7 @@ private:
 
   void reallocTempData(int max_samples, int max_obs);
 
-  laser_model_t model_type;
+  LaserModel model_type;
 
   // Current data timestamp
   double time;
