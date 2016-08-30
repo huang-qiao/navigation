@@ -260,7 +260,7 @@ void pf_update_action(pf_t *pf, pf_action_model_fn_t action_fn, void *action_dat
 
 
 #include <float.h>
-// Update the filter with some new sensor observation
+/* Update the filter with some new sensor observation
 void pf_update_sensor(pf_t *pf, pf_sensor_model_fn_t sensor_fn, void *sensor_data)
 //void pf_update_sensor(pf_t *pf, pf_sensor_model_fn_t sensor_fn, AMCLSensorDataPtr sensor_data)
 {
@@ -273,6 +273,21 @@ void pf_update_sensor(pf_t *pf, pf_sensor_model_fn_t sensor_fn, void *sensor_dat
 
   // Compute the sample weights
   total = (*sensor_fn) (sensor_data, set);
+
+  pf_normalize_weights(pf, total);
+
+  return;
+}
+*/
+
+void pf_normalize_weights(pf_t *pf, const double &total_weight)
+{
+  pf_sample_set_t *set;
+  pf_sample_t *sample;
+  double total = total_weight;
+  int i;
+
+  set = pf->sets + pf->current_set;
 
   if (total > 0.0)
   {
@@ -306,10 +321,7 @@ void pf_update_sensor(pf_t *pf, pf_sensor_model_fn_t sensor_fn, void *sensor_dat
       sample->weight = 1.0 / set->sample_count;
     }
   }
-
-  return;
 }
-
 
 // Resample the distribution
 void pf_update_resample(pf_t *pf)

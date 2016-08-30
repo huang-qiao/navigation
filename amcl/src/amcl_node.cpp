@@ -1265,7 +1265,8 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
               (i * angle_increment);
     }
 TRACE_FUNC
-    lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
+    //lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
+    lasers_[laser_index]->UpdateSensor(pf_, &ldata);
     //lasers_[laser_index]->UpdateSensor(pf_, std::make_shared<AMCLSensorData>(ldata));
 TRACE_FUNC
     lasers_update_[laser_index] = false;

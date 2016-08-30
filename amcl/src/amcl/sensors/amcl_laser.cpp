@@ -118,20 +118,32 @@ AMCLLaser::SetModelLikelihoodFieldProb(double z_hit,
 
 ////////////////////////////////////////////////////////////////////////////////
 // Apply the laser sensor model
+//bool AMCLLaser::UpdateSensor(pf_t *pf, AMCLSensorData *data)
 bool AMCLLaser::UpdateSensor(pf_t *pf, AMCLSensorData *data)
 {
   if (this->max_beams < 2)
     return false;
 
+  pf_sample_set_t *set;
+  set = pf->sets + pf->current_set;
+  double total_weight;
+
   // Apply the laser sensor model
-  if(this->model_type == LASER_MODEL_BEAM)
-    pf_update_sensor(pf, (pf_sensor_model_fn_t) BeamModel, data);
-  else if(this->model_type == LASER_MODEL_LIKELIHOOD_FIELD)
-    pf_update_sensor(pf, (pf_sensor_model_fn_t) LikelihoodFieldModel, data);
-  else if(this->model_type == LASER_MODEL_LIKELIHOOD_FIELD_PROB)
-    pf_update_sensor(pf, (pf_sensor_model_fn_t) LikelihoodFieldModelProb, data);
-  else
-    pf_update_sensor(pf, (pf_sensor_model_fn_t) BeamModel, data);
+  if(this->model_type == LASER_MODEL_BEAM) {
+    //pf_update_sensor(pf, (pf_sensor_model_fn_t) BeamModel, data);
+    total_weight = BeamModel((AMCLLaserData*)data, set);
+  } else if(this->model_type == LASER_MODEL_LIKELIHOOD_FIELD) {
+    //pf_update_sensor(pf, (pf_sensor_model_fn_t) LikelihoodFieldModel, data);
+    total_weight = LikelihoodFieldModel((AMCLLaserData*)data, set);
+  } else if(this->model_type == LASER_MODEL_LIKELIHOOD_FIELD_PROB) {
+    //pf_update_sensor(pf, (pf_sensor_model_fn_t) LikelihoodFieldModelProb, data);
+    total_weight = LikelihoodFieldModelProb((AMCLLaserData*)data, set);
+  } else {
+    //pf_update_sensor(pf, (pf_sensor_model_fn_t) BeamModel, data);
+    total_weight = BeamModel((AMCLLaserData*)data, set);
+  }
+
+  pf_normalize_weights(pf, total_weight);
 
   return true;
 }
