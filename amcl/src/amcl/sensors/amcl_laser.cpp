@@ -28,10 +28,28 @@
 ///////////////////////////////////////////////////////////////////////////
 
 #include <sys/types.h> // required by Darwin
-#include <math.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <unistd.h>
+#include <cmath>
+#include <cstdlib>
+#include <cassert>
+
+#include <iostream>
+#include <cstring>
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#define TRACE_FUNC \
+  do { \
+    std::cout << __FILE__ << ":" << __LINE__ << " in " << __func__ << std::endl; \
+  } while (0);using namespace amcl;
+
+#define TRACE_FUNC_ENTER \
+  do { \
+    std::cout << __FILE__ << ":" << __LINE__ << " in " << __func__ << ":[ENTER]" << std::endl; \
+  } while (0);
+
+#define TRACE_FUNC_EXIT \
+  do { \
+    std::cout << __FILE__ << ":" << __LINE__ << " in " << __func__ << ":[EXIT]" << std::endl; \
+  } while (0);
+
 
 #include "amcl_laser.hpp"
 
@@ -118,9 +136,10 @@ AMCLLaser::SetModelLikelihoodFieldProb(double z_hit,
 
 ////////////////////////////////////////////////////////////////////////////////
 // Apply the laser sensor model
-//bool AMCLLaser::UpdateSensor(pf_t *pf, AMCLSensorData *data)
-bool AMCLLaser::UpdateSensor(pf_t *pf, AMCLSensorData *data)
+//bool AMCLLaser::UpdateSensor(pf_t *pf, AMCLSensorDataPtr data)
+bool AMCLLaser::UpdateSensor(pf_t *pf, AMCLSensorDataPtr data)
 {
+  TRACE_FUNC_ENTER
   if (this->max_beams < 2)
     return false;
 
@@ -131,29 +150,33 @@ bool AMCLLaser::UpdateSensor(pf_t *pf, AMCLSensorData *data)
   // Apply the laser sensor model
   if(this->model_type == LASER_MODEL_BEAM) {
     //pf_update_sensor(pf, (pf_sensor_model_fn_t) BeamModel, data);
-    total_weight = BeamModel((AMCLLaserData*)data, set);
+    //total_weight = BeamModel((AMCLLaserData*)data, set);
+      total_weight = BeamModel(std::dynamic_pointer_cast<AMCLLaserData>(data), set);
   } else if(this->model_type == LASER_MODEL_LIKELIHOOD_FIELD) {
     //pf_update_sensor(pf, (pf_sensor_model_fn_t) LikelihoodFieldModel, data);
-    total_weight = LikelihoodFieldModel((AMCLLaserData*)data, set);
+    //total_weight = LikelihoodFieldModel((AMCLLaserData*)data, set);
+    total_weight = LikelihoodFieldModel(std::dynamic_pointer_cast<AMCLLaserData>(data), set);
   } else if(this->model_type == LASER_MODEL_LIKELIHOOD_FIELD_PROB) {
     //pf_update_sensor(pf, (pf_sensor_model_fn_t) LikelihoodFieldModelProb, data);
-    total_weight = LikelihoodFieldModelProb((AMCLLaserData*)data, set);
+    //total_weight = LikelihoodFieldModelProb((AMCLLaserData*)data, set);
+    total_weight = LikelihoodFieldModelProb(std::dynamic_pointer_cast<AMCLLaserData>(data), set);
   } else {
     //pf_update_sensor(pf, (pf_sensor_model_fn_t) BeamModel, data);
-    total_weight = BeamModel((AMCLLaserData*)data, set);
+    //total_weight = BeamModel((AMCLLaserData*)data, set);
+    total_weight = BeamModel(std::dynamic_pointer_cast<AMCLLaserData>(data), set);
   }
 
   pf_normalize_weights(pf, total_weight);
-
+  TRACE_FUNC_EXIT
   return true;
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////
 // Determine the probability for the given pose
-double AMCLLaser::BeamModel(AMCLLaserData *data, pf_sample_set_t* set)
+double AMCLLaser::BeamModel(AMCLLaserDataPtr data, pf_sample_set_t* set)
 {
-  AMCLLaser *self;
+  //AMCLLaser *self;
   int i, j, step;
   double z, pz;
   double p;
@@ -163,7 +186,8 @@ double AMCLLaser::BeamModel(AMCLLaserData *data, pf_sample_set_t* set)
   pf_sample_t *sample;
   pf_vector_t pose;
 
-  self = (AMCLLaser*) data->sensor;
+  //self = (AMCLLaser*) data->sensor;
+  AMCLLaserPtr self = std::dynamic_pointer_cast<AMCLLaser>(data->sensor);
 
   total_weight = 0.0;
 
@@ -222,9 +246,10 @@ double AMCLLaser::BeamModel(AMCLLaserData *data, pf_sample_set_t* set)
   return(total_weight);
 }
 
-double AMCLLaser::LikelihoodFieldModel(AMCLLaserData *data, pf_sample_set_t* set)
+double AMCLLaser::LikelihoodFieldModel(AMCLLaserDataPtr data, pf_sample_set_t* set)
 {
-  AMCLLaser *self;
+  TRACE_FUNC_ENTER
+  //AMCLLaser *self;
   int i, j, step;
   double z, pz;
   double p;
@@ -234,10 +259,11 @@ double AMCLLaser::LikelihoodFieldModel(AMCLLaserData *data, pf_sample_set_t* set
   pf_vector_t pose;
   pf_vector_t hit;
 
-  self = (AMCLLaser*) data->sensor;
+  //self = (AMCLLaser*) data->sensor;
+  AMCLLaserPtr self = std::dynamic_pointer_cast<AMCLLaser>(data->sensor);
 
   total_weight = 0.0;
-
+  TRACE_FUNC
   // Compute the sample weights
   for (j = 0; j < set->sample_count; j++)
   {
@@ -308,13 +334,13 @@ double AMCLLaser::LikelihoodFieldModel(AMCLLaserData *data, pf_sample_set_t* set
     sample->weight *= p;
     total_weight += sample->weight;
   }
-
+TRACE_FUNC_EXIT
   return(total_weight);
 }
 
-double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserData *data, pf_sample_set_t* set)
+double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserDataPtr data, pf_sample_set_t* set)
 {
-  AMCLLaser *self;
+  //AMCLLaser *self;
   int i, j, step;
   double z, pz;
   double log_p;
@@ -324,7 +350,8 @@ double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserData *data, pf_sample_set_t*
   pf_vector_t pose;
   pf_vector_t hit;
 
-  self = (AMCLLaser*) data->sensor;
+  //self = (AMCLLaser*) data->sensor;
+  AMCLLaserPtr self = std::dynamic_pointer_cast<AMCLLaser>(data->sensor);
 
   total_weight = 0.0;
 

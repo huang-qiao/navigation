@@ -189,7 +189,7 @@ class AmclNode
     message_filters::Subscriber<sensor_msgs::LaserScan>* laser_scan_sub_;
     tf::MessageFilter<sensor_msgs::LaserScan>* laser_scan_filter_;
     ros::Subscriber initial_pose_sub_;
-    std::vector< AMCLLaser* > lasers_;
+    std::vector<AMCLLaserPtr> lasers_; //std::vector< AMCLLaser* > lasers_;
     std::vector< bool > lasers_update_;
     std::map< std::string, int > frame_to_laser_;
 
@@ -208,8 +208,7 @@ class AmclNode
     bool m_force_update;  // used to temporarily let amcl update samples even when no motion occurs...
 
     AMCLOdom* odom_;
-    AMCLLaser* laser_;
-    //AMCLLaserPtr laser_;
+    AMCLLaserPtr laser_; //AMCLLaser* laser_;
 
     ros::Duration cloud_pub_interval;
     ros::Time last_cloud_pub_time;
@@ -565,10 +564,8 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   ROS_ASSERT(odom_);
   odom_->SetModel( odom_model_type_, alpha1_, alpha2_, alpha3_, alpha4_, alpha5_ );
   // Laser
-  delete laser_;
-  //laser_.reset();
-  laser_ = new AMCLLaser(max_beams_, map_);
-  //laser_ = std::make_shared<AMCLLaser>(max_beams_, map_);
+  laser_.reset(); //delete laser_;
+  laser_ = std::make_shared<AMCLLaser>(max_beams_, map_); //laser_ = new AMCLLaser(max_beams_, map_);
   ROS_ASSERT(laser_);
   if(laser_model_type_ == LASER_MODEL_BEAM)
     laser_->SetModelBeam(z_hit_, z_short_, z_max_, z_rand_,
@@ -865,10 +862,8 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
   ROS_ASSERT(odom_);
   odom_->SetModel( odom_model_type_, alpha1_, alpha2_, alpha3_, alpha4_, alpha5_ );
   // Laser
-  delete laser_;
-  //laser_.reset();
-  laser_ = new AMCLLaser(max_beams_, map_);
-  //laser_ = std::make_shared<AMCLLaser>(max_beams_, map_);
+  laser_.reset(); // delete laser_;
+  laser_ = std::make_shared<AMCLLaser>(max_beams_, map_); // laser_ = new AMCLLaser(max_beams_, map_);
   ROS_ASSERT(laser_);
   if(laser_model_type_ == LASER_MODEL_BEAM)
     laser_->SetModelBeam(z_hit_, z_short_, z_max_, z_rand_,
@@ -909,9 +904,8 @@ AmclNode::freeMapDependentMemory()
   }
   delete odom_;
   odom_ = NULL;
-  delete laser_;
-  //laser_.reset();
-  laser_ = NULL;
+  laser_.reset(); // delete laser_;
+  //laser_ = NULL;
   TRACE_FUNC_EXIT
 }
 
@@ -1190,7 +1184,9 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     odata.delta = delta;
 
     // Use the action data to update the filter
-    odom_->UpdateAction(pf_, (AMCLSensorData*)&odata);
+    //odom_->UpdateAction(pf_, (AMCLSensorData*)&odata);
+    AMCLOdomDataPtr odata_ptr = std::make_shared<AMCLOdomData>(odata);
+    odom_->UpdateAction(pf_, std::dynamic_pointer_cast<AMCLSensorData>(odata_ptr));
 
     // Pose at last filter update
     //this->pf_odom_pose = pose;
@@ -1200,9 +1196,12 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
   // If the robot has moved, update the filter
   if(lasers_update_[laser_index])
   {
-    AMCLLaserData ldata;TRACE_FUNC
-    ldata.sensor = lasers_[laser_index];TRACE_FUNC
-    ldata.range_count = laser_scan->ranges.size();TRACE_FUNC
+    //AMCLLaserData ldata;TRACE_FUNC
+    AMCLLaserDataPtr ldata_ptr = std::make_shared<AMCLLaserData>();
+    //ldata.sensor = lasers_[laser_index];TRACE_FUNC
+    //ldata.range_count = laser_scan->ranges.size();TRACE_FUNC
+    ldata_ptr->sensor = lasers_[laser_index];TRACE_FUNC
+    ldata_ptr->range_count = laser_scan->ranges.size();TRACE_FUNC
 
     // To account for lasers that are mounted upside-down, we determine the
     // min, max, and increment angles of the laser in the base frame.
@@ -1237,10 +1236,12 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 
     // Apply range min/max thresholds, if the user supplied them
     if(laser_max_range_ > 0.0) {
-      ldata.range_max = std::min(laser_scan->range_max, (float)laser_max_range_);TRACE_FUNC
+      //ldata.range_max = std::min(laser_scan->range_max, (float)laser_max_range_);TRACE_FUNC
+      ldata_ptr->range_max = std::min(laser_scan->range_max, (float)laser_max_range_);TRACE_FUNC
     }
     else {
-      ldata.range_max = laser_scan->range_max;TRACE_FUNC
+      //ldata.range_max = laser_scan->range_max;TRACE_FUNC
+      ldata_ptr->range_max = laser_scan->range_max;TRACE_FUNC
     }
     double range_min;
     if(laser_min_range_ > 0.0) {
@@ -1250,23 +1251,32 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     }
     TRACE_FUNC
     // The AMCLLaserData destructor will free this memory
-    ldata.ranges = new double[ldata.range_count][2];
-    ROS_ASSERT(ldata.ranges);
-    for(int i=0;i<ldata.range_count;i++)
+    //ldata.ranges = new double[ldata.range_count][2];
+    ldata_ptr->ranges = new double[ldata_ptr->range_count][2];
+    //ROS_ASSERT(ldata.ranges);
+    ROS_ASSERT(ldata_ptr->ranges);
+    //for(int i=0;i<ldata.range_count;i++)
+    for (int i=0; i<ldata_ptr->range_count; i++)
     {
       // amcl doesn't (yet) have a concept of min range.  So we'll map short
       // readings to max range.
-      if(laser_scan->ranges[i] <= range_min)
-        ldata.ranges[i][0] = ldata.range_max;
-      else
-        ldata.ranges[i][0] = laser_scan->ranges[i];
+      if(laser_scan->ranges[i] <= range_min) {
+        //ldata.ranges[i][0] = ldata.range_max;
+        ldata_ptr->ranges[i][0] = ldata_ptr->range_max;
+      } else {
+        //ldata.ranges[i][0] = laser_scan->ranges[i];
+        ldata_ptr->ranges[i][0] = laser_scan->ranges[i];
+      }
       // Compute bearing
-      ldata.ranges[i][1] = angle_min +
-              (i * angle_increment);
+      //ldata.ranges[i][1] = angle_min + (i * angle_increment);
+      ldata_ptr->ranges[i][1] = angle_min + (i * angle_increment);
     }
 TRACE_FUNC
     //lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
-    lasers_[laser_index]->UpdateSensor(pf_, &ldata);
+    //lasers_[laser_index]->UpdateSensor(pf_, &ldata);
+    //AMCLLaserDataPtr ldata_ptr = std::make_shared<AMCLLaserData>(ldata);
+    lasers_[laser_index]->UpdateSensor(pf_, std::dynamic_pointer_cast<AMCLSensorData>(ldata_ptr));
+
     //lasers_[laser_index]->UpdateSensor(pf_, std::make_shared<AMCLSensorData>(ldata));
 TRACE_FUNC
     lasers_update_[laser_index] = false;
@@ -1281,12 +1291,12 @@ TRACE_FUNC
     }
 
     pf_sample_set_t* set = pf_->sets + pf_->current_set;TRACE_FUNC
-    ROS_DEBUG("Num samples: %d\n", set->sample_count);
+    ROS_DEBUG("Num samples: %d\n", set->sample_count);TRACE_FUNC
 
     // Publish the resulting cloud
     // TODO: set maximum rate for publishing
     if (!m_force_update) {
-      geometry_msgs::PoseArray cloud_msg;
+      geometry_msgs::PoseArray cloud_msg; TRACE_FUNC
       cloud_msg.header.stamp = ros::Time::now();
       cloud_msg.header.frame_id = global_frame_id_;
       cloud_msg.poses.resize(set->sample_count);
@@ -1297,14 +1307,15 @@ TRACE_FUNC
                                            set->samples[i].pose.v[1], 0)),
                         cloud_msg.poses[i]);
       }
-      particlecloud_pub_.publish(cloud_msg);
+      particlecloud_pub_.publish(cloud_msg);TRACE_FUNC
     }
+    TRACE_FUNC
   }
-
+TRACE_FUNC
   if(resampled || force_publication)
   {
     // Read out the current hypotheses
-    double max_weight = 0.0;
+    double max_weight = 0.0;TRACE_FUNC
     int max_weight_hyp = -1;
     std::vector<amcl_hyp_t> hyps;
     hyps.resize(pf_->sets[pf_->current_set].cluster_count);
@@ -1330,7 +1341,7 @@ TRACE_FUNC
         max_weight_hyp = hyp_count;
       }
     }
-
+TRACE_FUNC
     if(max_weight > 0.0)
     {
       ROS_DEBUG("Max weight pose: %.3f %.3f %.3f",
@@ -1379,7 +1390,7 @@ TRACE_FUNC
          puts("");
          }
        */
-
+TRACE_FUNC
       pose_pub_.publish(p);
       last_published_pose = p;
 
