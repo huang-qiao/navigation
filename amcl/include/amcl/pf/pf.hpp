@@ -62,7 +62,7 @@ typedef struct _pf_sample_set_t
   pf_sample_t *samples;
 
   // A kdtree encoding the histogram
-  pf_kdtree_t *kdtree;
+  KdTree *kdtree;
 
   // Clusters
   int cluster_count, cluster_max_count;

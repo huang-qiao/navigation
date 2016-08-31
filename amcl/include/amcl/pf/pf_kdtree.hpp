@@ -3,9 +3,10 @@
 #include "pf_vector.hpp"
 
 // Info for a node in the tree
-typedef struct pf_kdtree_node {
+struct Node {
   // Depth in the tree
-  int leaf, depth;
+  bool leaf_;
+  int depth;
 
   // Pivot dimension and value
   int pivot_dim;
@@ -21,47 +22,61 @@ typedef struct pf_kdtree_node {
   int cluster;
 
   // Child nodes
-  struct pf_kdtree_node *children[2];
-
-} pf_kdtree_node_t;
+  struct Node *children[2];
+};
 
 // A kd tree
-typedef struct {
+struct KdTree {
   // Cell size
   double size[3];
 
   // The root node of the tree
-  pf_kdtree_node_t *root;
+  Node *root;
 
   // The number of nodes in the tree
   int node_count, node_max_count;
-  pf_kdtree_node_t *nodes;
+  Node *nodes;
 
   // The number of leaf nodes in the tree
   int leaf_count;
 
-} pf_kdtree_t;
+  KdTree(const int &max_size);
+  virtual ~KdTree();
 
-// Create a tree
-extern pf_kdtree_t *pf_kdtree_alloc(int max_size);
+  // Clear all entries from the tree
+  void clear();
+
+  // Cluster the leaves in the tree
+  void cluster();
+
+  // Determine the probability estimate for the given pose
+  double getProb(Pose pose);
+
+  // Determine the cluster label for the given pose
+  int getCluster(Pose pose);
+
+  // Insert a pose into the tree
+  void insert(Pose pose, double value);
+
+private:
+  // Recursive node search
+  Node *findNode(Node *node, int key[]);
+
+  // Recursively label nodes in this cluster
+  void clusterNode(Node *node, int depth);
+
+  // Compare keys to see if they are equal
+  bool isEqual(int key_a[], int key_b[]);
+
+  // Insert a node into the tree
+  Node *insertNode(Node *parent, Node *node, int key[], double value);
+
+  // Recursive node printing
+  void printNode(Node *node);
+};
 
 // Destroy a tree
-extern void pf_kdtree_free(pf_kdtree_t *self);
-
-// Clear all entries from the tree
-extern void pf_kdtree_clear(pf_kdtree_t *self);
-
-// Insert a pose into the tree
-extern void pf_kdtree_insert(pf_kdtree_t *self, Pose pose, double value);
-
-// Cluster the leaves in the tree
-extern void pf_kdtree_cluster(pf_kdtree_t *self);
-
-// Determine the probability estimate for the given pose
-extern double pf_kdtree_get_prob(pf_kdtree_t *self, Pose pose);
-
-// Determine the cluster label for the given pose
-extern int pf_kdtree_get_cluster(pf_kdtree_t *self, Pose pose);
+// extern void pf_kdtree_delete(KdTree *self);
 
 #ifdef INCLUDE_RTKGUI
 
