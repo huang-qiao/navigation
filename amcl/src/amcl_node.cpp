@@ -46,6 +46,8 @@
 
 #define NEW_UNIFORM_SAMPLING 1
 
+#include <memory>
+
 #include <cstring>
 #include <iostream>
 #define __FILENAME__                                                           \
@@ -189,7 +191,7 @@ private:
   std::map<std::string, int> frame_to_laser_;
 
   // Particle filter
-  pf_t *pf_;
+  ParticleFilter *pf_;
   double pf_err_, pf_z_;
   bool pf_init_;
   Pose pf_odom_pose_;
@@ -267,7 +269,7 @@ std::vector<std::pair<int, int>> AmclNode::free_space_indices;
 
 #define USAGE "USAGE: amcl"
 
-boost::shared_ptr<AmclNode> amcl_node_ptr;
+std::shared_ptr<AmclNode> amcl_node_ptr;
 
 void sigintHandler(int sig) {
   // Save latest pose as we're shutting down.
@@ -522,13 +524,14 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level) {
   beam_skip_distance_ = config.beam_skip_distance;
   beam_skip_threshold_ = config.beam_skip_threshold;
 
-  pf_ = pf_alloc(min_particles_, max_particles_, alpha_slow_, alpha_fast_,
-                 (pf_init_model_fn_t)AmclNode::uniformPoseGenerator,
-                 (void *)map_.get());
+  pf_ = new ParticleFilter(
+      min_particles_, max_particles_, alpha_slow_, alpha_fast_,
+      (pf_init_model_fn_t)AmclNode::uniformPoseGenerator, (void *)map_.get());
+
   pf_err_ = config.kld_err;
   pf_z_ = config.kld_z;
-  pf_->pop_err = pf_err_;
-  pf_->pop_z = pf_z_;
+  pf_->pop_err_ = pf_err_;
+  pf_->pop_z_ = pf_z_;
 
   // Initialize the filter
   Pose pf_init_pose_mean = Pose(0.0, 0.0, 0.0); // pf_vector_zero();
@@ -540,7 +543,8 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level) {
   pf_init_pose_cov.m[0][0] = last_published_pose.pose.covariance[6 * 0 + 0];
   pf_init_pose_cov.m[1][1] = last_published_pose.pose.covariance[6 * 1 + 1];
   pf_init_pose_cov.m[2][2] = last_published_pose.pose.covariance[6 * 5 + 5];
-  pf_init(pf_, pf_init_pose_mean, pf_init_pose_cov);
+  // pf_init(pf_, pf_init_pose_mean, pf_init_pose_cov);
+  pf_->init(pf_init_pose_mean, pf_init_pose_cov);
   pf_init_ = false;
 
   // Instantiate the sensor objects
@@ -800,11 +804,12 @@ void AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid &msg) {
         free_space_indices.push_back(std::make_pair(i, j));
 #endif
   // Create the particle filter
-  pf_ = pf_alloc(min_particles_, max_particles_, alpha_slow_, alpha_fast_,
-                 (pf_init_model_fn_t)AmclNode::uniformPoseGenerator,
-                 (void *)map_.get());
-  pf_->pop_err = pf_err_;
-  pf_->pop_z = pf_z_;
+  pf_ = new ParticleFilter(
+      min_particles_, max_particles_, alpha_slow_, alpha_fast_,
+      (pf_init_model_fn_t)AmclNode::uniformPoseGenerator, (void *)map_.get());
+
+  pf_->pop_err_ = pf_err_;
+  pf_->pop_z_ = pf_z_;
 
   // Initialize the filter
   updatePoseFromServer();
@@ -816,7 +821,8 @@ void AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid &msg) {
   pf_init_pose_cov.m[0][0] = init_cov_[0];
   pf_init_pose_cov.m[1][1] = init_cov_[1];
   pf_init_pose_cov.m[2][2] = init_cov_[2];
-  pf_init(pf_, pf_init_pose_mean, pf_init_pose_cov);
+  // pf_init(pf_, pf_init_pose_mean, pf_init_pose_cov);
+  pf_->init(pf_init_pose_mean, pf_init_pose_cov);
   pf_init_ = false;
 
   // Instantiate the sensor objects
@@ -863,7 +869,8 @@ void AmclNode::freeMapDependentMemory() {
     map_ = NULL;
   }
   if (pf_ != NULL) {
-    pf_free(pf_);
+    // pf_delete(pf_);
+    delete pf_;
     pf_ = NULL;
   }
   odom_.reset(); // delete odom_;
@@ -986,8 +993,10 @@ bool AmclNode::globalLocalizationCallback(std_srvs::Empty::Request &req,
   }
   boost::recursive_mutex::scoped_lock gl(configuration_mutex_);
   ROS_INFO("Initializing with uniform distribution");
-  pf_init_model(pf_, (pf_init_model_fn_t)AmclNode::uniformPoseGenerator,
-                (void *)map_.get());
+  // pf_init_model(pf_, (pf_init_model_fn_t)AmclNode::uniformPoseGenerator,
+  // (void *)map_.get());
+  pf_->initModel((pf_init_model_fn_t)AmclNode::uniformPoseGenerator,
+                 (void *)map_.get());
   ROS_INFO("Global initialisation done!");
   pf_init_ = false;
 
@@ -1244,11 +1253,12 @@ void AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr &laser_scan) {
 
     // Resample the particles
     if (!(++resample_count_ % resample_interval_)) {
-      pf_update_resample(pf_);
+      // pf_update_resample(pf_);
+      pf_->updateResample();
       resampled = true;
     }
 
-    pf_sample_set_t *set = pf_->sets + pf_->current_set;
+    SampleSet *set = pf_->sets + pf_->current_set_;
 
     ROS_DEBUG("Num samples: %d\n", set->sample_count);
 
@@ -1277,14 +1287,15 @@ void AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr &laser_scan) {
 
     int max_weight_hyp = -1;
     std::vector<amcl_hyp_t> hyps;
-    hyps.resize(pf_->sets[pf_->current_set].cluster_count);
+    hyps.resize(pf_->sets[pf_->current_set_].cluster_count);
     for (int hyp_count = 0;
-         hyp_count < pf_->sets[pf_->current_set].cluster_count; hyp_count++) {
+         hyp_count < pf_->sets[pf_->current_set_].cluster_count; hyp_count++) {
       double weight;
       Pose pose_mean;
       Covariance pose_cov;
-      if (!pf_get_cluster_stats(pf_, hyp_count, &weight, &pose_mean,
-                                &pose_cov)) {
+      // if (!pf_get_cluster_stats(pf_, hyp_count, &weight, &pose_mean,
+      // &pose_cov))
+      if (!pf_->getClusterStats(hyp_count, &weight, &pose_mean, &pose_cov)) {
         ROS_ERROR("Couldn't get stats on cluster %d", hyp_count);
         break;
       }
@@ -1322,7 +1333,7 @@ void AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr &laser_scan) {
           tf::createQuaternionFromYaw(hyps[max_weight_hyp].pf_pose_mean.v[2]),
           p.pose.pose.orientation);
       // Copy in the covariance, converting from 3-D to 6-D
-      pf_sample_set_t *set = pf_->sets + pf_->current_set;
+      SampleSet *set = pf_->sets + pf_->current_set_;
       for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 2; j++) {
           // Report the overall filter covariance, rather than the
@@ -1502,8 +1513,9 @@ void AmclNode::applyInitialPose() {
 
   boost::recursive_mutex::scoped_lock cfl(configuration_mutex_);
   if (initial_pose_hyp_ != NULL && map_ != NULL) {
-    pf_init(pf_, initial_pose_hyp_->pf_pose_mean,
-            initial_pose_hyp_->pf_pose_cov);
+    // pf_init(pf_, initial_pose_hyp_->pf_pose_mean,
+    // initial_pose_hyp_->pf_pose_cov);
+    pf_->init(initial_pose_hyp_->pf_pose_mean, initial_pose_hyp_->pf_pose_cov);
     pf_init_ = false;
 
     delete initial_pose_hyp_;

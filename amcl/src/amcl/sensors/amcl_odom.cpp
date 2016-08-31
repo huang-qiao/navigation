@@ -110,16 +110,16 @@ AMCLOdom::SetModel( OdomModel type,
 
 ////////////////////////////////////////////////////////////////////////////////
 // Apply the action model
-bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorDataPtr data)
+bool AMCLOdom::UpdateAction(ParticleFilter *pf, AMCLSensorDataPtr data)
 {
   AMCLOdomData *ndata;
   //ndata = (AMCLOdomData*) data;
   ndata = (AMCLOdomData*)data.get();
 
   // Compute the new sample poses
-  pf_sample_set_t *set;
+  SampleSet *set;
 
-  set = pf->sets + pf->current_set;
+  set = pf->sets + pf->current_set_;
   Pose old_pose = Pose::Sub(ndata->pose, ndata->delta); //pf_vector_sub(ndata->pose, ndata->delta);
 
   switch( this->model_type )
@@ -143,7 +143,7 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorDataPtr data)
 
     for (int i = 0; i < set->sample_count; i++)
     {
-      pf_sample_t* sample = set->samples + i;
+      Sample* sample = set->samples + i;
 
       delta_bearing = angle_diff(atan2(ndata->delta.v[1], ndata->delta.v[0]),
                                  old_pose.v[2]) + sample->pose.v[2];
@@ -192,7 +192,7 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorDataPtr data)
 
     for (int i = 0; i < set->sample_count; i++)
     {
-      pf_sample_t* sample = set->samples + i;
+      Sample* sample = set->samples + i;
 
       // Sample pose differences
       delta_rot1_hat = angle_diff(delta_rot1,
@@ -234,7 +234,7 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorDataPtr data)
 
     for (int i = 0; i < set->sample_count; i++)
     {
-      pf_sample_t* sample = set->samples + i;
+      Sample* sample = set->samples + i;
 
       delta_bearing = angle_diff(atan2(ndata->delta.v[1], ndata->delta.v[0]),
                                  old_pose.v[2]) + sample->pose.v[2];
@@ -283,7 +283,7 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorDataPtr data)
 
     for (int i = 0; i < set->sample_count; i++)
     {
-      pf_sample_t* sample = set->samples + i;
+      Sample* sample = set->samples + i;
 
       // Sample pose differences
       delta_rot1_hat = angle_diff(delta_rot1,

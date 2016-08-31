@@ -53,7 +53,7 @@ public:
 
   // Update the filter based on the action model.  Returns true if the filter
   // has been updated.
-  virtual bool UpdateAction(pf_t *pf, AMCLSensorDataPtr data);
+  virtual bool UpdateAction(ParticleFilter *pf, AMCLSensorDataPtr data);
 
 private:
   // Current data timestamp

@@ -22,15 +22,15 @@ public:
 
   // Update the filter based on the action model.  Returns true if the filter
   // has been updated.
-  virtual bool UpdateAction(pf_t *pf, AMCLSensorDataPtr data);
+  virtual bool UpdateAction(ParticleFilter *pf, AMCLSensorDataPtr data);
 
   // Initialize the filter based on the sensor model.  Returns true if the
   // filter has been initialized.
-  virtual bool InitSensor(pf_t *pf, AMCLSensorDataPtr data);
+  virtual bool InitSensor(ParticleFilter *pf, AMCLSensorDataPtr data);
 
   // Update the filter based on the sensor model.  Returns true if the
   // filter has been updated.
-  virtual bool UpdateSensor(pf_t *pf, AMCLSensorDataPtr data);
+  virtual bool UpdateSensor(ParticleFilter *pf, AMCLSensorDataPtr data);
 
   // Flag is true if this is the action sensor
   bool is_action;

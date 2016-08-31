@@ -7,47 +7,41 @@
 #include "pf_kdtree.hpp"
 #include "pf_pdf.hpp"
 
-// Compute the required number of samples, given that there are k bins
-// with samples in them.
-static int pf_resample_limit(pf_t *pf, int k);
-
-// Re-compute the cluster statistics for a sample set
-static void pf_cluster_stats(pf_t *pf, pf_sample_set_t *set);
-
 // Create a new filter
-pf_t *pf_alloc(int min_samples, int max_samples, double alpha_slow,
-               double alpha_fast, pf_init_model_fn_t random_pose_fn,
-               void *random_pose_data) {
+ParticleFilter::ParticleFilter(int min_samples, int max_samples,
+                               double alpha_slow, double alpha_fast,
+                               pf_init_model_fn_t random_pose_fn,
+                               void *random_pose_data) {
   int i, j;
-  pf_t *pf;
-  pf_sample_set_t *set;
-  pf_sample_t *sample;
+  // ParticleFilter *pf;
+  SampleSet *set;
+  Sample *sample;
 
   srand48(time(NULL));
 
-  pf = (pf_t *)malloc(sizeof(pf_t));
+  // pf = (ParticleFilter *)malloc(sizeof(ParticleFilter));
 
-  pf->random_pose_fn = random_pose_fn;
-  pf->random_pose_data = random_pose_data;
+  random_pose_fn_ = random_pose_fn;
+  random_pose_data_ = random_pose_data;
 
-  pf->min_samples = min_samples;
-  pf->max_samples = max_samples;
+  min_samples_ = min_samples;
+  max_samples_ = max_samples;
 
   // Control parameters for the population size calculation.  [err] is
   // the max error between the true distribution and the estimated
   // distribution.  [z] is the upper standard normal quantile for (1 -
   // p), where p is the probability that the error on the estimated
   // distrubition will be less than [err].
-  pf->pop_err = 0.01;
-  pf->pop_z = 3;
-  pf->dist_threshold = 0.5;
+  pop_err_ = 0.01;
+  pop_z_ = 3;
+  dist_threshold_ = 0.5;
 
-  pf->current_set = 0;
+  current_set_ = 0;
   for (j = 0; j < 2; j++) {
-    set = pf->sets + j;
+    set = sets + j;
 
     set->sample_count = max_samples;
-    set->samples = (pf_sample_t *)malloc(max_samples * sizeof(pf_sample_t));
+    set->samples = (Sample *)malloc(max_samples * sizeof(Sample));
 
     for (i = 0; i < set->sample_count; i++) {
       sample = set->samples + i;
@@ -63,27 +57,32 @@ pf_t *pf_alloc(int min_samples, int max_samples, double alpha_slow,
 
     set->cluster_count = 0;
     set->cluster_max_count = max_samples;
-    set->clusters =
-        (pf_cluster_t *)malloc(set->cluster_max_count * sizeof(pf_cluster_t));
+    set->clusters = (Cluster *)malloc(set->cluster_max_count * sizeof(Cluster));
 
     set->mean = Pose(0.0, 0.0, 0.0); // set->mean = pf_vector_zero();
     set->cov = Covariance();         // pf_matrix_zero();
   }
 
-  pf->w_slow = 0.0;
-  pf->w_fast = 0.0;
+  w_slow_ = 0.0;
+  w_fast_ = 0.0;
 
-  pf->alpha_slow = alpha_slow;
-  pf->alpha_fast = alpha_fast;
+  alpha_slow_ = alpha_slow;
+  alpha_fast_ = alpha_fast;
 
   // set converged to 0
-  pf_init_converged(pf);
-
-  return pf;
+  initConverged();
 }
 
-// Free an existing filter
-void pf_free(pf_t *pf) {
+ParticleFilter::~ParticleFilter() {
+  for (size_t i = 0; i < 2; i++) {
+    free(sets[i].clusters);
+    delete sets[i].kdtree;
+    free(sets[i].samples);
+  }
+}
+
+/* Free an existing filter
+void pf_delete(ParticleFilter *pf) {
   int i;
 
   for (i = 0; i < 2; i++) {
@@ -96,28 +95,28 @@ void pf_free(pf_t *pf) {
 
   return;
 }
-
+*/
 // Initialize the filter using a guassian
-void pf_init(pf_t *pf, Pose mean, Covariance cov) {
+void ParticleFilter::init(Pose mean, Covariance cov) {
   int i;
-  pf_sample_set_t *set;
-  pf_sample_t *sample;
+  SampleSet *set;
+  Sample *sample;
   PdfGaussianPtr pdf;
 
-  set = pf->sets + pf->current_set;
+  set = sets + current_set_;
 
   // Create the kd tree for adaptive sampling
   // pf_kdtree_clear(set->kdtree);
   set->kdtree->clear();
 
-  set->sample_count = pf->max_samples;
+  set->sample_count = max_samples_;
 
   pdf = PdfGaussian::CreatePdf(mean, cov);
 
   // Compute the new sample poses
   for (i = 0; i < set->sample_count; i++) {
     sample = set->samples + i;
-    sample->weight = 1.0 / pf->max_samples;
+    sample->weight = 1.0 / max_samples_;
     sample->pose = pdf->sample(); // sample->pose = PdfGaussian::sample(pdf);
 
     // Add sample to histogram
@@ -125,37 +124,35 @@ void pf_init(pf_t *pf, Pose mean, Covariance cov) {
     set->kdtree->insert(sample->pose, sample->weight);
   }
 
-  pf->w_slow = pf->w_fast = 0.0;
+  w_slow_ = w_fast_ = 0.0;
 
   pdf.reset(); // pf_pdf_gaussian_free(pdf);
 
   // Re-compute cluster statistics
-  pf_cluster_stats(pf, set);
+  clusterStats(set);
 
   // set converged to 0
-  pf_init_converged(pf);
-
-  return;
+  initConverged();
 }
 
 // Initialize the filter using some model
-void pf_init_model(pf_t *pf, pf_init_model_fn_t init_fn, void *init_data) {
+void ParticleFilter::initModel(pf_init_model_fn_t init_fn, void *init_data) {
   int i;
-  pf_sample_set_t *set;
-  pf_sample_t *sample;
+  SampleSet *set;
+  Sample *sample;
 
-  set = pf->sets + pf->current_set;
+  set = sets + current_set_;
 
   // Create the kd tree for adaptive sampling
   // pf_kdtree_clear(set->kdtree);
   set->kdtree->clear();
 
-  set->sample_count = pf->max_samples;
+  set->sample_count = max_samples_;
 
   // Compute the new sample poses
   for (i = 0; i < set->sample_count; i++) {
     sample = set->samples + i;
-    sample->weight = 1.0 / pf->max_samples;
+    sample->weight = 1.0 / max_samples_;
     sample->pose = (*init_fn)(init_data);
 
     // Add sample to histogram
@@ -163,31 +160,31 @@ void pf_init_model(pf_t *pf, pf_init_model_fn_t init_fn, void *init_data) {
     set->kdtree->insert(sample->pose, sample->weight);
   }
 
-  pf->w_slow = pf->w_fast = 0.0;
+  w_slow_ = w_fast_ = 0.0;
 
   // Re-compute cluster statistics
-  pf_cluster_stats(pf, set);
+  clusterStats(set);
 
   // set converged to 0
-  pf_init_converged(pf);
+  initConverged();
 
   return;
 }
 
-void pf_init_converged(pf_t *pf) {
-  pf_sample_set_t *set;
-  set = pf->sets + pf->current_set;
+void ParticleFilter::initConverged() {
+  SampleSet *set;
+  set = sets + current_set_;
   set->converged = 0;
-  pf->converged = 0;
+  converged_ = 0;
 }
 
-int pf_update_converged(pf_t *pf) {
+int ParticleFilter::updateConverged() {
   int i;
-  pf_sample_set_t *set;
-  pf_sample_t *sample;
+  SampleSet *set;
+  Sample *sample;
   double total;
 
-  set = pf->sets + pf->current_set;
+  set = sets + current_set_;
   double mean_x = 0, mean_y = 0;
 
   for (i = 0; i < set->sample_count; i++) {
@@ -201,61 +198,25 @@ int pf_update_converged(pf_t *pf) {
 
   for (i = 0; i < set->sample_count; i++) {
     sample = set->samples + i;
-    if (fabs(sample->pose.v[0] - mean_x) > pf->dist_threshold ||
-        fabs(sample->pose.v[1] - mean_y) > pf->dist_threshold) {
+    if (fabs(sample->pose.v[0] - mean_x) > dist_threshold_ ||
+        fabs(sample->pose.v[1] - mean_y) > dist_threshold_) {
       set->converged = 0;
-      pf->converged = 0;
+      converged_ = 0;
       return 0;
     }
   }
   set->converged = 1;
-  pf->converged = 1;
+  converged_ = 1;
   return 1;
 }
 
-// Update the filter with some new action
-void pf_update_action(pf_t *pf, pf_action_model_fn_t action_fn,
-                      void *action_data) {
-  pf_sample_set_t *set;
-
-  set = pf->sets + pf->current_set;
-
-  (*action_fn)(action_data, set);
-
-  return;
-}
-
-/*
-#include <float.h>
-// Update the filter with some new sensor observation
-void pf_update_sensor(pf_t *pf, pf_sensor_model_fn_t sensor_fn, void
-*sensor_data)
-//void pf_update_sensor(pf_t *pf, pf_sensor_model_fn_t sensor_fn,
-AMCLSensorDataPtr sensor_data)
-{
-  int i;
-  pf_sample_set_t *set;
-  pf_sample_t *sample;
-  double total;
-
-  set = pf->sets + pf->current_set;
-
-  // Compute the sample weights
-  total = (*sensor_fn) (sensor_data, set);
-
-  pf_normalize_weights(pf, total);
-
-  return;
-}
-*/
-
-void pf_normalize_weights(pf_t *pf, const double &total_weight) {
-  pf_sample_set_t *set;
-  pf_sample_t *sample;
+void ParticleFilter::normalizeWeights(const double &total_weight) {
+  SampleSet *set;
+  Sample *sample;
   double total = total_weight;
   int i;
 
-  set = pf->sets + pf->current_set;
+  set = sets + current_set_;
 
   if (total > 0.0) {
     // Normalize weights
@@ -267,16 +228,16 @@ void pf_normalize_weights(pf_t *pf, const double &total_weight) {
     }
     // Update running averages of likelihood of samples (Prob Rob p258)
     w_avg /= set->sample_count;
-    if (pf->w_slow == 0.0)
-      pf->w_slow = w_avg;
+    if (w_slow_ == 0.0)
+      w_slow_ = w_avg;
     else
-      pf->w_slow += pf->alpha_slow * (w_avg - pf->w_slow);
-    if (pf->w_fast == 0.0)
-      pf->w_fast = w_avg;
+      w_slow_ += alpha_slow_ * (w_avg - w_slow_);
+    if (w_fast_ == 0.0)
+      w_fast_ = w_avg;
     else
-      pf->w_fast += pf->alpha_fast * (w_avg - pf->w_fast);
+      w_fast_ += alpha_fast_ * (w_avg - w_fast_);
     // printf("w_avg: %e slow: %e fast: %e\n",
-    // w_avg, pf->w_slow, pf->w_fast);
+    // w_avg, w_slow, w_fast);
   } else {
     // Handle zero total
     for (i = 0; i < set->sample_count; i++) {
@@ -287,11 +248,11 @@ void pf_normalize_weights(pf_t *pf, const double &total_weight) {
 }
 
 // Resample the distribution
-void pf_update_resample(pf_t *pf) {
+void ParticleFilter::updateResample() {
   int i;
   double total;
-  pf_sample_set_t *set_a, *set_b;
-  pf_sample_t *sample_a, *sample_b;
+  SampleSet *set_a, *set_b;
+  Sample *sample_a, *sample_b;
 
   // double r,c,U;
   // int m;
@@ -300,8 +261,8 @@ void pf_update_resample(pf_t *pf) {
 
   double w_diff;
 
-  set_a = pf->sets + pf->current_set;
-  set_b = pf->sets + (pf->current_set + 1) % 2;
+  set_a = sets + current_set_;
+  set_b = sets + (current_set_ + 1) % 2;
 
   // Build up cumulative probability table for resampling.
   // TODO: Replace this with a more efficient procedure
@@ -320,7 +281,7 @@ void pf_update_resample(pf_t *pf) {
   total = 0;
   set_b->sample_count = 0;
 
-  w_diff = 1.0 - pf->w_fast / pf->w_slow;
+  w_diff = 1.0 - w_fast_ / w_slow_;
   if (w_diff < 0.0)
     w_diff = 0.0;
   // printf("w_diff: %9.6f\n", w_diff);
@@ -335,11 +296,11 @@ void pf_update_resample(pf_t *pf) {
   i = 0;
   m = 0;
   */
-  while (set_b->sample_count < pf->max_samples) {
+  while (set_b->sample_count < max_samples_) {
     sample_b = set_b->samples + set_b->sample_count++;
 
     if (drand48() < w_diff)
-      sample_b->pose = (pf->random_pose_fn)(pf->random_pose_data);
+      sample_b->pose = (random_pose_fn_)(random_pose_data_);
     else {
       // Can't (easily) combine low-variance sampler with KLD adaptive
       // sampling, so we'll take the more traditional route.
@@ -390,13 +351,13 @@ void pf_update_resample(pf_t *pf) {
     set_b->kdtree->insert(sample_b->pose, sample_b->weight);
 
     // See if we have enough samples yet
-    if (set_b->sample_count > pf_resample_limit(pf, set_b->kdtree->leaf_count))
+    if (set_b->sample_count > resampleLimit(set_b->kdtree->leaf_count))
       break;
   }
 
   // Reset averages, to avoid spiraling off into complete randomness.
   if (w_diff > 0.0)
-    pf->w_slow = pf->w_fast = 0.0;
+    w_slow_ = w_fast_ = 0.0;
 
   // fprintf(stderr, "\n\n");
 
@@ -407,12 +368,12 @@ void pf_update_resample(pf_t *pf) {
   }
 
   // Re-compute cluster statistics
-  pf_cluster_stats(pf, set_b);
+  clusterStats(set_b);
 
   // Use the newly created sample set
-  pf->current_set = (pf->current_set + 1) % 2;
+  current_set_ = (current_set_ + 1) % 2;
 
-  pf_update_converged(pf);
+  updateConverged();
 
   free(c);
   return;
@@ -420,33 +381,33 @@ void pf_update_resample(pf_t *pf) {
 
 // Compute the required number of samples, given that there are k bins
 // with samples in them.  This is taken directly from Fox et al.
-int pf_resample_limit(pf_t *pf, int k) {
+int ParticleFilter::resampleLimit(int k) {
   double a, b, c, x;
   int n;
 
   if (k <= 1)
-    return pf->max_samples;
+    return max_samples_;
 
   a = 1;
   b = 2 / (9 * ((double)k - 1));
-  c = sqrt(2 / (9 * ((double)k - 1))) * pf->pop_z;
+  c = sqrt(2 / (9 * ((double)k - 1))) * pop_z_;
   x = a - b + c;
 
-  n = (int)ceil((k - 1) / (2 * pf->pop_err) * x * x * x);
+  n = (int)ceil((k - 1) / (2 * pop_err_) * x * x * x);
 
-  if (n < pf->min_samples)
-    return pf->min_samples;
-  if (n > pf->max_samples)
-    return pf->max_samples;
+  if (n < min_samples_)
+    return min_samples_;
+  if (n > max_samples_)
+    return max_samples_;
 
   return n;
 }
 
 // Re-compute the cluster statistics for a sample set
-void pf_cluster_stats(pf_t *pf, pf_sample_set_t *set) {
+void ParticleFilter::clusterStats(SampleSet *set) {
   int i, j, k, cidx;
-  pf_sample_t *sample;
-  pf_cluster_t *cluster;
+  Sample *sample;
+  Cluster *cluster;
 
   // Workspace
   double m[4], c[2][2];
@@ -574,13 +535,13 @@ void pf_cluster_stats(pf_t *pf, pf_sample_set_t *set) {
 }
 
 // Compute the CEP statistics (mean and variance).
-void pf_get_cep_stats(pf_t *pf, Pose *mean, double *var) {
+void ParticleFilter::getCepStats(Pose *mean, double *var) {
   int i;
   double mn, mx, my, mrr;
-  pf_sample_set_t *set;
-  pf_sample_t *sample;
+  SampleSet *set;
+  Sample *sample;
 
-  set = pf->sets + pf->current_set;
+  set = sets + current_set_;
 
   mn = 0.0;
   mx = 0.0;
@@ -607,12 +568,12 @@ void pf_get_cep_stats(pf_t *pf, Pose *mean, double *var) {
 }
 
 // Get the statistics for a particular cluster.
-int pf_get_cluster_stats(pf_t *pf, int clabel, double *weight, Pose *mean,
-                         Covariance *cov) {
-  pf_sample_set_t *set;
-  pf_cluster_t *cluster;
+int ParticleFilter::getClusterStats(int clabel, double *weight, Pose *mean,
+                                    Covariance *cov) {
+  SampleSet *set;
+  Cluster *cluster;
 
-  set = pf->sets + pf->current_set;
+  set = sets + current_set_;
 
   if (clabel >= set->cluster_count)
     return 0;

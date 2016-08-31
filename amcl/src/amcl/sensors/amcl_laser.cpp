@@ -92,13 +92,13 @@ void AMCLLaser::SetModelLikelihoodFieldProb(
 ////////////////////////////////////////////////////////////////////////////////
 // Apply the laser sensor model
 // bool AMCLLaser::UpdateSensor(pf_t *pf, AMCLSensorDataPtr data)
-bool AMCLLaser::UpdateSensor(pf_t *pf, AMCLSensorDataPtr data) {
+bool AMCLLaser::UpdateSensor(ParticleFilter *pf, AMCLSensorDataPtr data) {
 
   if (this->max_beams < 2)
     return false;
 
-  pf_sample_set_t *set;
-  set = pf->sets + pf->current_set;
+  SampleSet *set;
+  set = pf->sets + pf->current_set_;
   double total_weight;
 
   // Apply the laser sensor model
@@ -125,14 +125,15 @@ bool AMCLLaser::UpdateSensor(pf_t *pf, AMCLSensorDataPtr data) {
         BeamModel(std::dynamic_pointer_cast<AMCLLaserData>(data), set);
   }
 
-  pf_normalize_weights(pf, total_weight);
+  // pf_normalize_weights(pf, total_weight);
+  pf->normalizeWeights(total_weight);
 
   return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Determine the probability for the given pose
-double AMCLLaser::BeamModel(AMCLLaserDataPtr data, pf_sample_set_t *set) {
+double AMCLLaser::BeamModel(AMCLLaserDataPtr data, SampleSet *set) {
   // AMCLLaser *self;
   int i, j, step;
   double z, pz;
@@ -140,7 +141,7 @@ double AMCLLaser::BeamModel(AMCLLaserDataPtr data, pf_sample_set_t *set) {
   double map_range;
   double obs_range, obs_bearing;
   double total_weight;
-  pf_sample_t *sample;
+  Sample *sample;
   Pose pose;
 
   // self = (AMCLLaser*) data->sensor;
@@ -210,8 +211,7 @@ double AMCLLaser::BeamModel(AMCLLaserDataPtr data, pf_sample_set_t *set) {
   return (total_weight);
 }
 
-double AMCLLaser::LikelihoodFieldModel(AMCLLaserDataPtr data,
-                                       pf_sample_set_t *set) {
+double AMCLLaser::LikelihoodFieldModel(AMCLLaserDataPtr data, SampleSet *set) {
 
   // AMCLLaser *self;
   int i, j, step;
@@ -219,7 +219,7 @@ double AMCLLaser::LikelihoodFieldModel(AMCLLaserDataPtr data,
   double p;
   double obs_range, obs_bearing;
   double total_weight;
-  pf_sample_t *sample;
+  Sample *sample;
   Pose pose;
   Pose hit;
 
@@ -308,14 +308,14 @@ double AMCLLaser::LikelihoodFieldModel(AMCLLaserDataPtr data,
 }
 
 double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserDataPtr data,
-                                           pf_sample_set_t *set) {
+                                           SampleSet *set) {
   // AMCLLaser *self;
   int i, j, step;
   double z, pz;
   double log_p;
   double obs_range, obs_bearing;
   double total_weight;
-  pf_sample_t *sample;
+  Sample *sample;
   Pose pose;
   Pose hit;
 

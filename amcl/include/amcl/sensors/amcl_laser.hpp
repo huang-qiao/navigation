@@ -64,7 +64,7 @@ public:
 
   // Update the filter based on the sensor model.  Returns true if the
   // filter has been updated.
-  virtual bool UpdateSensor(pf_t *pf, AMCLSensorDataPtr data);
+  virtual bool UpdateSensor(ParticleFilter *pf, AMCLSensorDataPtr data);
   //virtual bool UpdateSensor(pf_t *pf, AMCLLaserDataPtr data);
 
   // Set the laser's pose after construction
@@ -74,14 +74,14 @@ public:
 private:
   // Determine the probability for the given pose
   static double BeamModel(AMCLLaserDataPtr data,
-                                   pf_sample_set_t* set);
+                                   SampleSet* set);
   // Determine the probability for the given pose
   static double LikelihoodFieldModel(AMCLLaserDataPtr data,
-                                              pf_sample_set_t* set);
+                                              SampleSet* set);
 
   // Determine the probability for the given pose - more probablistic model
   static double LikelihoodFieldModelProb(AMCLLaserDataPtr data,
-                                             pf_sample_set_t* set);
+                                             SampleSet* set);
 
   void reallocTempData(int max_samples, int max_obs);
 
