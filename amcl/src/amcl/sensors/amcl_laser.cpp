@@ -5,28 +5,9 @@
 
 #include <cstring>
 #include <iostream>
-#define __FILENAME__                                                           \
-  (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-#define TRACE_FUNC                                                             \
-  do {                                                                         \
-    std::cout << __FILE__ << ":" << __LINE__ << " in " << __func__             \
-              << std::endl;                                                    \
-  } while (0);                                                                 \
-  using namespace amcl;
-
-#define TRACE_FUNC_ENTER                                                       \
-  do {                                                                         \
-    std::cout << __FILE__ << ":" << __LINE__ << " in " << __func__             \
-              << ":[ENTER]" << std::endl;                                      \
-  } while (0);
-
-#define TRACE_FUNC_EXIT                                                        \
-  do {                                                                         \
-    std::cout << __FILE__ << ":" << __LINE__ << " in " << __func__             \
-              << ":[EXIT]" << std::endl;                                       \
-  } while (0);
 
 #include "amcl_laser.hpp"
+#include "util.hpp"
 
 using namespace amcl;
 

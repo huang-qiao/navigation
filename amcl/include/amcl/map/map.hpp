@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <memory>
 #include <vector>
 
@@ -73,8 +74,8 @@ struct Map : std::enable_shared_from_this<Map>
   inline double toWorldY(double j) { return origin_y + ((j) - size_y / 2) * scale; }
 
   // Convert from world coords to map coords
-  inline double toGridX(double x) { return floor((x - origin_x) / scale + 0.5) + size_x / 2; }
-  inline double toGridY(double y) { return floor((y - origin_y) / scale + 0.5) + size_y / 2; }
+  inline double toGridX(double x) { return std::floor((x - origin_x) / scale + 0.5) + size_x / 2; }
+  inline double toGridY(double y) { return std::floor((y - origin_y) / scale + 0.5) + size_y / 2; }
 
   // Test to see if the given map coords lie within the absolute map bounds.
   inline bool isValid(int i, int j) { return (i >= 0) && (i < size_x) && (j >= 0) && (j < size_y); }

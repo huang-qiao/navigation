@@ -68,8 +68,12 @@ public:
   //virtual bool UpdateSensor(pf_t *pf, AMCLLaserDataPtr data);
 
   // Set the laser's pose after construction
-  void SetLaserPose(Pose& laser_pose)
+  inline void SetLaserPose(Pose& laser_pose)
           {this->laser_pose = laser_pose;}
+
+  // The laser's frame id
+  inline void SetLaserFrameId(std::string laser_frame_id) { laser_frame_id_ = laser_frame_id; }
+  inline std::string GetLaserFrameId() { return laser_frame_id_; }
 
 private:
   // Determine the probability for the given pose
@@ -95,6 +99,9 @@ private:
 
   // Laser offset relative to robot
   Pose laser_pose;
+
+  // Laser id
+  std::string laser_frame_id_;
 
   // Max beams to consider
   int max_beams;

@@ -7,6 +7,24 @@
 #include "pf_kdtree.hpp"
 #include "pf_pdf.hpp"
 
+// Get the statistics for a particular cluster.
+int SampleSet::getClusterStats(int clabel, double *weight, Pose *mean,
+                                    Covariance *cov) {
+  Cluster *cluster;
+
+
+  if (clabel >= cluster_count)
+    return 0;
+
+  cluster = clusters + clabel;
+
+  *weight = cluster->weight;
+  *mean = cluster->mean;
+  *cov = cluster->cov;
+
+  return 1;
+}
+
 // Create a new filter
 ParticleFilter::ParticleFilter(int min_samples, int max_samples,
                                double alpha_slow, double alpha_fast,
@@ -575,6 +593,7 @@ int ParticleFilter::getClusterStats(int clabel, double *weight, Pose *mean,
 
   set = sets + current_set_;
 
+  /*
   if (clabel >= set->cluster_count)
     return 0;
   cluster = set->clusters + clabel;
@@ -582,6 +601,9 @@ int ParticleFilter::getClusterStats(int clabel, double *weight, Pose *mean,
   *weight = cluster->weight;
   *mean = cluster->mean;
   *cov = cluster->cov;
+  */
 
-  return 1;
+  int ret = set->getClusterStats(clabel, weight, mean, cov);
+
+  return ret;
 }

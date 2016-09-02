@@ -53,6 +53,10 @@ struct SampleSet {
   Pose mean;
   Covariance cov;
   int converged;
+
+  // Compute the statistics for a particular cluster.  Returns 0 if
+  // there is no such cluster.
+  int getClusterStats(int cluster, double *weight, Pose *mean, Covariance *cov);
 };
 
 // Information for an entire filter
