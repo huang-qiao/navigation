@@ -8,11 +8,12 @@
 std::vector<std::pair<int, int>> AmclCore::free_space_indices;
 
 Pose AmclCore::UniformPoseGenerator(void *arg) {
-    // MapPtr map = (MapPtr)arg;
+  // MapPtr map = (MapPtr)arg;
   Map *map_raw = (Map *)arg;
   MapPtr map = std::make_shared<Map>(*map_raw);
 #if NEW_UNIFORM_SAMPLING
-  std::cout << "free space indices = " << free_space_indices.size() << std::endl;
+  std::cout << "free space indices = " << free_space_indices.size()
+            << std::endl;
   unsigned int rand_index = drand48() * free_space_indices.size();
   std::pair<int, int> free_point = free_space_indices[rand_index];
   Pose p;
@@ -51,7 +52,6 @@ AmclCore::AmclCore(double d_thresh, double a_thresh, size_t resample_interval)
       a_thresh_(a_thresh),
       resample_interval_(resample_interval),
       resample_count_(0) {
-  TRACE_FUNC_ENTER
   get_first_odom_ = false;
   odom_update_ = false;
   lasers_update_.clear();
@@ -66,11 +66,9 @@ AmclCore::AmclCore(double d_thresh, double a_thresh, size_t resample_interval)
   std::cout << "d_thresh_ = " << d_thresh_ << std::endl;
   std::cout << "a_thresh_ = " << a_thresh_ << std::endl;
   std::cout << "resample_interval_ = " << resample_interval_ << std::endl;
-  TRACE_FUNC_EXIT
 }
 
 bool AmclCore::setLaserModel(std::string laser_model_type) {
-  TRACE_FUNC_ENTER
   if (laser_model_type == "beam") {
     laser_model_ = amcl::LaserModel::BEAM;
   } else if (laser_model_type == "likelihood_field") {
@@ -82,12 +80,11 @@ bool AmclCore::setLaserModel(std::string laser_model_type) {
               << "\"; defaulting to likelihood_field model" << std::endl;
     laser_model_ = amcl::LaserModel::LIKELIHOOD_FIELD;
   }
-  TRACE_FUNC_EXIT
+
   return true;
 }
 
 bool AmclCore::setOdomModel(std::string odom_model_type) {
-  TRACE_FUNC_ENTER
   if (odom_model_type == "diff") {
     odom_model_ = amcl::OdomModel::DIFF;
   } else if (odom_model_type == "omni") {
@@ -101,7 +98,7 @@ bool AmclCore::setOdomModel(std::string odom_model_type) {
               << "\"; defaulting to diff model" << std::endl;
     odom_model_ = amcl::OdomModel::DIFF;
   }
-  TRACE_FUNC_EXIT
+
   return true;
 }
 
@@ -110,17 +107,14 @@ bool AmclCore::initParticleFilter(int min_samples, int max_samples,
                                   double pop_err, double pop_z,
                                   Pose init_pose_mean,
                                   Covariance init_pose_cov) {
-  TRACE_FUNC_ENTER
   std::cout << "min_samples: " << min_samples << std::endl;
   std::cout << "max_samples: " << max_samples << std::endl;
   std::cout << "alpha_slow: " << alpha_slow << std::endl;
   std::cout << "alpha_fast: " << alpha_fast << std::endl;
   std::cout << "pop_err: " << pop_err << std::endl;
   std::cout << "pop_z: " << pop_z << std::endl;
-  std::cout << "init pose: "
-            << init_pose_mean.v[0] << ","
-            << init_pose_mean.v[1] << ","
-            << init_pose_mean.v[2] << std::endl;
+  std::cout << "init pose: " << init_pose_mean.v[0] << ","
+            << init_pose_mean.v[1] << "," << init_pose_mean.v[2] << std::endl;
 #if NEW_UNIFORM_SAMPLING
   // Index of free space
   free_space_indices.resize(0);
@@ -132,32 +126,27 @@ bool AmclCore::initParticleFilter(int min_samples, int max_samples,
     }
   }
 #endif
-  pf_ = new ParticleFilter(
-      min_samples, max_samples, alpha_slow, alpha_fast,
-      (pf_init_model_fn_t)AmclCore::UniformPoseGenerator, (void *)map_.get());
+  pf_ = new ParticleFilter(min_samples, max_samples, alpha_slow, alpha_fast,
+                           (pf_init_model_fn_t)AmclCore::UniformPoseGenerator,
+                           (void *)map_.get());
   pf_->pop_err_ = pop_err;
   pf_->pop_z_ = pop_z;
   pf_->init(init_pose_mean, init_pose_cov);
   get_first_odom_ = false;
   odom_update_ = false;
   lasers_update_.clear();
-  TRACE_FUNC_EXIT
+
   return true;
 }
 
-void AmclCore::registerCallbacks(Callbacks* cb) {
-  TRACE_FUNC_ENTER
-  cbs_.push_back(cb);
-  TRACE_FUNC_EXIT
-}
+void AmclCore::registerCallbacks(Callbacks *cb) { cbs_.push_back(cb); }
 
 bool AmclCore::initOdom(double alpha1, double alpha2, double alpha3,
                         double alpha4, double alpha5) {
-  TRACE_FUNC_ENTER
   odom_.reset();
   odom_ = std::make_shared<amcl::AMCLOdom>();
   odom_->SetModel(odom_model_, alpha1, alpha2, alpha3, alpha4, alpha5);
-  TRACE_FUNC_EXIT
+
   return true;
 }
 
@@ -167,7 +156,6 @@ bool AmclCore::initLaser(size_t max_beams, double z_hit, double z_short,
                          double max_occ_dist, bool do_beamskip,
                          double beam_skip_distance, double beam_skip_threshold,
                          double beam_skip_error_threshold) {
-  TRACE_FUNC_ENTER
   if (!map_) {
     std::cerr << "initLaser: map_ not set!";
     return false;
@@ -194,13 +182,12 @@ bool AmclCore::initLaser(size_t max_beams, double z_hit, double z_short,
     laser_->SetModelLikelihoodField(z_hit, z_rand, sigma_hit, max_occ_dist);
     std::cout << "Done initializing likelihood field model." << std::endl;
   }
-  TRACE_FUNC_EXIT
+
   return true;
 }
 
 bool AmclCore::initMap(size_t width, size_t height, double scale, double orig_x,
                        double orig_y, std::vector<int> map_data) {
-  TRACE_FUNC_ENTER
   assert(width * height == map_data.size());
 
   map_.reset();
@@ -221,90 +208,75 @@ bool AmclCore::initMap(size_t width, size_t height, double scale, double orig_x,
       map_->cells[i]->occ_state = 0;
     }
   }
-  TRACE_FUNC_EXIT
+
   return true;
 }
 
 amcl::AMCLLaserPtr AmclCore::getLaser(std::string laser_frame_id) {
-  //TRACE_FUNC_ENTER
+  //
   auto it = frame_to_laser_.find(laser_frame_id);
   if (it == frame_to_laser_.end()) {
     std::cerr << "getLaser: " << laser_frame_id << " not found" << std::endl;
-    //TRACE_FUNC_EXIT
+    //
     return nullptr;
   }
   int laser_index = it->second;
-  std::cout << "getLaser: laser_index = " << laser_index << std::endl;
+  // std::cout << "getLaser: laser_index = " << laser_index << std::endl;
   return lasers_[laser_index];
 }
 
 bool AmclCore::registerLaser(std::string laser_frame_id, Pose laser_pose) {
-  TRACE_FUNC_ENTER
-  if(getLaser(laser_frame_id)) {
-    std::cout << laser_frame_id << "is already registered" << std::endl;
+  if (getLaser(laser_frame_id)) {
+    // std::cout << laser_frame_id << "is already registered" << std::endl;
     return false;
   }
   lasers_.push_back(std::make_shared<amcl::AMCLLaser>(*laser_));
   lasers_update_.push_back(true);
   size_t laser_index = frame_to_laser_.size();
-  std::cout << "registerLaser: laser_index = " << laser_index << std::endl;
+  // std::cout << "registerLaser: laser_index = " << laser_index << std::endl;
   lasers_[laser_index]->SetLaserPose(laser_pose);
   lasers_[laser_index]->SetLaserFrameId(laser_frame_id);
   frame_to_laser_[laser_frame_id] = laser_index;
-  TRACE_FUNC_EXIT
+
   return true;
 }
 
 void AmclCore::clearLasers() {
-  TRACE_FUNC_ENTER
   lasers_.clear();
   frame_to_laser_.clear();
   lasers_update_.clear();
-  //if (laser_) {
+  // if (laser_) {
   //  laser_.reset();
   //}
-  TRACE_FUNC_EXIT
 }
 void AmclCore::clearMap() {
-  TRACE_FUNC_ENTER
   if (map_) {
     map_.reset();
   }
-  TRACE_FUNC_EXIT
 }
 void AmclCore::clearOdom() {
-  TRACE_FUNC_ENTER
   if (odom_) {
     odom_.reset();
   }
-  TRACE_FUNC_EXIT
 }
 void AmclCore::clearParticleFilter() {
-  TRACE_FUNC_ENTER
   if (pf_) {
     delete pf_;
     pf_ = NULL;
     // pf_.reset();
   }
-  TRACE_FUNC_EXIT
 }
 
-bool AmclCore::pfSetUniform() {
-  TRACE_FUNC_ENTER
-  TRACE_FUNC_EXIT
-  return true;
-}
+bool AmclCore::pfSetUniform() { return true; }
 
 bool AmclCore::pfSetInitPose(Pose pf_pose_mean, Covariance pf_pose_cov) {
-  TRACE_FUNC_ENTER
   pf_->init(pf_pose_mean, pf_pose_cov);
   get_first_odom_ = false;
-  TRACE_FUNC_EXIT
+
   return true;
 }
 
 bool AmclCore::pfUpdateOdom(Pose pose) {
-  TRACE_FUNC_ENTER
   if (!map_) {
     std::cerr << "pfUpdateOdom: map_ not init yet!" << std::endl;
     return false;
@@ -325,12 +297,9 @@ bool AmclCore::pfUpdateOdom(Pose pose) {
 
     // Set the laser update flags
     if (update) {
-      std::cout << "set sensor update to TRUE" << std::endl;
+      // std::cout << "set sensor update to TRUE" << std::endl;
       odom_update_ = true;
       std::fill(lasers_update_.begin(), lasers_update_.end(), true);
-      for (auto lu : lasers_update_) {
-        lu = true;
-      }
     }
   }
 
@@ -370,15 +339,14 @@ bool AmclCore::pfUpdateOdom(Pose pose) {
       cb->onUpdateParticles(set);
     }
   }
-  TRACE_FUNC_EXIT
+
   return true;
 }
 
 bool AmclCore::pfUpdateLaser(amcl::AMCLLaserDataPtr ldata) {
-  TRACE_FUNC_ENTER
   if (!map_) {
     std::cerr << "pfUpdateLaser: map_ not init yet!" << std::endl;
-    TRACE_FUNC_EXIT
+
     return false;
   }
   amcl::AMCLLaserPtr laser =
@@ -386,16 +354,15 @@ bool AmclCore::pfUpdateLaser(amcl::AMCLLaserDataPtr ldata) {
   std::string laser_frame_id = laser->GetLaserFrameId();
   auto it = frame_to_laser_.find(laser_frame_id);
   if (it == frame_to_laser_.end()) {
-    std::cout << "pfUpdateLaser: " << laser_frame_id << " not found" << std::endl;
-    TRACE_FUNC_EXIT
+    std::cout << "pfUpdateLaser: " << laser_frame_id << " not found"
+              << std::endl;
     return false;
   }
   int laser_index = it->second;
-  std::cout << "laser_index = " << laser_index << std::endl;
-  std::cout << "lasers_update_.size = " << lasers_update_.size() << std::endl;
+  // std::cout << "laser_index = " << laser_index << std::endl;
+  // std::cout << "lasers_update_.size = " << lasers_update_.size() << std::endl;
   if (!lasers_update_[laser_index]) {
-    std::cout << "pfUpdateLaser: laser update flag not set" << std::endl;
-    TRACE_FUNC_EXIT
+    // std::cout << "pfUpdateLaser: laser update flag not set" << std::endl;
     return false;
   }
 
@@ -404,7 +371,7 @@ bool AmclCore::pfUpdateLaser(amcl::AMCLLaserDataPtr ldata) {
   lasers_update_[laser_index] = false;
 
   bool resampled = false;
-  if(!(++resample_count_ % resample_interval_)) {
+  if (!(++resample_count_ % resample_interval_)) {
     pf_->updateResample();
     resampled = true;
   }
@@ -415,6 +382,6 @@ bool AmclCore::pfUpdateLaser(amcl::AMCLLaserDataPtr ldata) {
       cb->onUpdateParticles(set);
     }
   }
-  TRACE_FUNC_EXIT
+
   return true;
 }
