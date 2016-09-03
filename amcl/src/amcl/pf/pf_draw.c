@@ -90,7 +90,7 @@ void pf_draw_hist(pf_t *pf, rtk_fig_t *fig)
 // Draw the CEP statistics
 void pf_draw_cep_stats(pf_t *pf, rtk_fig_t *fig)
 {
-  pf_vector_t mean;
+  Pose mean;
   double var;
 
   pf_get_cep_stats(pf, &mean, &var);
@@ -109,9 +109,9 @@ void pf_draw_cluster_stats(pf_t *pf, rtk_fig_t *fig)
   int i;
   pf_cluster_t *cluster;
   pf_sample_set_t *set;
-  pf_vector_t mean;
-  pf_matrix_t cov;
-  pf_matrix_t r, d;
+  Pose mean;
+  Covariance cov;
+  Covariance r, d;
   double weight, o, d1, d2;
 
   set = pf->sets + pf->current_set;

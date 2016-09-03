@@ -1,49 +1,22 @@
-/*
- *  Player - One Hell of a Robot Server
- *  Copyright (C) 2000  Brian Gerkey   &  Kasper Stoy
- *                      gerkey@usc.edu    kaspers@robotics.usc.edu
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- */
-/**************************************************************************
- * Desc: Global map storage functions
- * Author: Andrew Howard
- * Date: 6 Feb 2003
- * CVS: $Id: map_store.c 2951 2005-08-19 00:48:20Z gerkey $
-**************************************************************************/
-
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "map.h"
+#include "map.hpp"
 
 
 ////////////////////////////////////////////////////////////////////////////
 // Load an occupancy grid
-int map_load_occ(map_t *map, const char *filename, double scale, int negate)
+int Map::loadOcc(const char *filename, double scale, int negate)
 {
   FILE *file;
   char magic[3];
   int i, j;
   int ch, occ;
   int width, height, depth;
-  map_cell_t *cell;
+  CellPtr cell;
 
   // Open file
   file = fopen(filename, "r");
@@ -54,7 +27,7 @@ int map_load_occ(map_t *map, const char *filename, double scale, int negate)
   }
 
   // Read ppm header
-  
+
   if ((fscanf(file, "%10s \n", magic) != 1) || (strcmp(magic, "P5") != 0))
   {
     fprintf(stderr, "incorrect image format; must be PGM/binary");
@@ -74,16 +47,18 @@ int map_load_occ(map_t *map, const char *filename, double scale, int negate)
   }
 
   // Allocate space in the map
-  if (map->cells == NULL)
+  if (cells.empty())
   {
-    map->scale = scale;
-    map->size_x = width;
-    map->size_y = height;
-    map->cells = calloc(width * height, sizeof(map->cells[0]));
+    this->scale = scale;
+    this->size_x = width;
+    this->size_y = height;
+    //map->cells = (MapCell*)calloc(width * height, sizeof(map->cells[0]));
+    this->cells.resize(width * height);
+    std::fill(this->cells.begin(), this->cells.end(), std::make_shared<Cell>());
   }
   else
   {
-    if (width != map->size_x || height != map->size_y)
+    if (width != this->size_x || height != this->size_y)
     {
       //PLAYER_ERROR("map dimensions are inconsistent with prior map dimensions");
       return -1;
@@ -119,15 +94,16 @@ int map_load_occ(map_t *map, const char *filename, double scale, int negate)
           occ = 0;
       }
 
-      if (!MAP_VALID(map, i, j))
+      if (!isValid(i, j))
         continue;
-      cell = map->cells + MAP_INDEX(map, i, j);
+      //cell = map->cells + MAP_INDEX(map, i, j);
+      cell = cells[toIndex(i, j)];
       cell->occ_state = occ;
     }
   }
-  
+
   fclose(file);
-  
+
   return 0;
 }
 
@@ -135,14 +111,14 @@ int map_load_occ(map_t *map, const char *filename, double scale, int negate)
 ////////////////////////////////////////////////////////////////////////////
 // Load a wifi signal strength map
 /*
-int map_load_wifi(map_t *map, const char *filename, int index)
+int map_load_wifi(MapPtr map, const char *filename, int index)
 {
   FILE *file;
   char magic[3];
   int i, j;
   int ch, level;
   int width, height, depth;
-  map_cell_t *cell;
+  CellPtr cell;
 
   // Open file
   file = fopen(filename, "r");
@@ -203,7 +179,7 @@ int map_load_wifi(map_t *map, const char *filename, int index)
       cell->wifi_levels[index] = level;
     }
   }
-  
+
   fclose(file);
 
   return 0;

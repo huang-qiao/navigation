@@ -28,7 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////
 
 
-#include "amcl_sensor.h"
+#include "amcl_sensor.hpp"
 
 using namespace amcl;
 
@@ -45,7 +45,7 @@ AMCLSensor::~AMCLSensor()
 
 ////////////////////////////////////////////////////////////////////////////////
 // Apply the action model
-bool AMCLSensor::UpdateAction(pf_t *pf, AMCLSensorData *data)
+bool AMCLSensor::UpdateAction(ParticleFilter *pf, AMCLSensorDataPtr data)
 {
   return false;
 }
@@ -53,7 +53,7 @@ bool AMCLSensor::UpdateAction(pf_t *pf, AMCLSensorData *data)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Initialize the filter
-bool AMCLSensor::InitSensor(pf_t *pf, AMCLSensorData *data)
+bool AMCLSensor::InitSensor(ParticleFilter *pf, AMCLSensorDataPtr data)
 {
   return false;
 }
@@ -61,7 +61,7 @@ bool AMCLSensor::InitSensor(pf_t *pf, AMCLSensorData *data)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Apply the sensor model
-bool AMCLSensor::UpdateSensor(pf_t *pf, AMCLSensorData *data)
+bool AMCLSensor::UpdateSensor(ParticleFilter *pf, AMCLSensorDataPtr data)
 {
   return false;
 }
@@ -87,7 +87,7 @@ void AMCLSensor::ShutdownGUI(rtk_canvas_t *canvas, rtk_fig_t *robot_fig)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Draw sensor data
-void AMCLSensor::UpdateGUI(rtk_canvas_t *canvas, rtk_fig_t *robot_fig, AMCLSensorData *data)
+void AMCLSensor::UpdateGUI(rtk_canvas_t *canvas, rtk_fig_t *robot_fig, AMCLSensorDataPtr data)
 {
   return;
 }
