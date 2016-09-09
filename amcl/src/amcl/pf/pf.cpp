@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
+#include <iostream>
 
 #include "pf.hpp"
 #include "pf_kdtree.hpp"
@@ -176,6 +177,8 @@ void ParticleFilter::initModel(pf_init_model_fn_t init_fn, void *init_data) {
     // Add sample to histogram
     // pf_kdtree_insert(set->kdtree, sample->pose, sample->weight);
     set->kdtree->insert(sample->pose, sample->weight);
+    // debug only
+    std::cout << "insert pose (" << sample->pose.v[0] << "," << sample->pose.v[1] << "," << sample->pose.v[2] << ")" << std::endl;
   }
 
   w_slow_ = w_fast_ = 0.0;
@@ -475,6 +478,13 @@ void ParticleFilter::clusterStats(SampleSet *set) {
     // cidx = pf_kdtree_get_cluster(set->kdtree, sample->pose);
     cidx = set->kdtree->getCluster(sample->pose);
     assert(cidx >= 0);
+    // debug only
+    std::cout << "sample[" << i << "] ("
+               << sample->pose.v[0] << ","
+               << sample->pose.v[1] << ","
+               << sample->pose.v[2] << "), "
+               << "cluster id = " << cidx << std::endl;
+
     if (cidx >= set->cluster_max_count)
       continue;
     if (cidx + 1 > set->cluster_count)

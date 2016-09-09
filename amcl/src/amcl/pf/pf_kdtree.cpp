@@ -58,6 +58,13 @@ void KdTree::insert(Pose pose, double value) {
 
   root = insertNode(NULL, root, key, value);
 
+  // debug only
+  std::cout << "KdTree::inserted key = ["
+             << key[0] << ","
+             << key[1] << ","
+             << key[2] << "],"
+             << "tree->node_count = " << this->node_count << std::endl;
+
   /* Test code
   //
   // printf("find %d %d %d\n", key[0], key[1], key[2]);
@@ -296,6 +303,9 @@ void KdTree::cluster() {
       assert(node == findNode(root, node->key));
     }
   }
+  // debug only
+  std::cout << "queue(leaf) count = " << queue_count << std::endl;
+  std::cout << "tree leaf_count = " << this->leaf_count << std::endl;
 
   cluster_count = 0;
 
@@ -309,6 +319,12 @@ void KdTree::cluster() {
 
     // Assign a label to this cluster
     node->cluster = cluster_count++;
+    // debug only
+    std::cout << "node->key["
+               << node->key[0] << ","
+               << node->key[1] << ","
+               << node->key[2] << "], "
+               << "cluster id = " << node->cluster << std::endl;
 
     // Recursively label nodes in this cluster
     clusterNode(node, 0);
@@ -345,6 +361,12 @@ void KdTree::clusterNode(Node *node, int depth) {
 
     // Label this node and recurse
     nnode->cluster = node->cluster;
+    // debug only
+    std::cout << "nnode->key["
+               << nnode->key[0] << ","
+               << nnode->key[1] << ","
+               << nnode->key[2] << "], "
+               << "cluster id = " << nnode->cluster << std::endl;
 
     clusterNode(nnode, depth + 1);
   }

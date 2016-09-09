@@ -122,6 +122,7 @@ bool AmclCore::initParticleFilter(int min_samples, int max_samples,
     for (int j = 0; j < map_->size_y; j++) {
       if (map_->cells[map_->toIndex(i, j)]->occ_state == -1) {
         free_space_indices.push_back(std::make_pair(i, j));
+        std::cout << "indices.push (" << i << "," << j << ")" << std::endl;
       }
     }
   }
@@ -267,7 +268,17 @@ void AmclCore::clearParticleFilter() {
   }
 }
 
-bool AmclCore::pfSetUniform() { return true; }
+bool AmclCore::pfSetUniform() {
+  pf_->initModel((pf_init_model_fn_t)AmclCore::UniformPoseGenerator, (void*)map_.get());
+  get_first_odom_ = false;
+
+  // callback
+  SampleSet* set = pf_->sets + pf_->current_set_;
+  for (auto cb : cbs_) {
+    cb->onUpdateParticles(set);
+  }
+  return true;
+}
 
 bool AmclCore::pfSetInitPose(Pose pf_pose_mean, Covariance pf_pose_cov) {
   pf_->init(pf_pose_mean, pf_pose_cov);
